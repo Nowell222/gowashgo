@@ -1,0 +1,158 @@
+/* ============================================================
+   Auth Layout — Login, Register, Invite pages (Fresh Laundry Theme)
+   Centered clean card on soft sky-blue background
+   ============================================================ */
+
+.auth-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--space-4);
+  background: #F0F7FF;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background fresh bubble accents */
+.auth-shell::before {
+  content: '';
+  position: absolute;
+  top: -150px;
+  right: -150px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(240, 247, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-shell::after {
+  content: '';
+  position: absolute;
+  bottom: -150px;
+  left: -150px;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(240, 247, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 12px 36px -4px rgba(14, 165, 233, 0.12), 0 4px 12px rgba(0, 0, 0, 0.03);
+  animation: slideUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auth-card__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.auth-card__logo-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #0284C7, #06B6D4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+}
+
+.auth-card__logo-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.03em;
+}
+
+.auth-card__logo-subtitle {
+  font-size: var(--text-xs);
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.auth-card__heading {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.auth-card__subheading {
+  font-size: var(--text-xs);
+  color: #64748B;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form__footer {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: #64748B;
+  margin-top: 16px;
+}
+
+.auth-form__footer a {
+  color: #0284C7;
+  font-weight: 700;
+  transition: color var(--transition-fast);
+}
+
+.auth-form__footer a:hover {
+  color: #0369A1;
+  text-decoration: underline;
+}
+
+/* Invite info card within auth layout */
+.invite-info {
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.invite-info__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369A1;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.invite-info__detail {
+  font-size: var(--text-xs);
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.invite-info__detail strong {
+  color: #0F172A;
+}
