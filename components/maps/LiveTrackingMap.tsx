@@ -41,6 +41,8 @@ export default function LiveTrackingMap({
   const targetMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   const [mapboxAvailable, setMapboxAvailable] = useState<boolean>(true);
+  const [routeDistanceKm, setRouteDistanceKm] = useState<number | null>(null);
+  const [routeDurationMin, setRouteDurationMin] = useState<number | null>(null);
 
   // Is a rider actually assigned and moving?
   const hasRider = Boolean(riderName || riderLocation);
@@ -65,7 +67,31 @@ export default function LiveTrackingMap({
     }
   }, [riderLocation, showRiderMarker]);
 
-  // Simulation mode (only if status is actually en route and simulating)
+  // Fetch real road navigation coordinates from Mapbox Directions API
+  async function fetchStreetRoute(origin: Point, destination: Point): Promise<[number, number][]> {
+    try {
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson&overview=full&access_token=${token}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        setRouteDistanceKm(route.distance ? Number((route.distance / 1000).toFixed(1)) : null);
+        setRouteDurationMin(route.duration ? Math.ceil(route.duration / 60) : null);
+        return route.geometry.coordinates;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch road directions from Mapbox:', err);
+    }
+
+    // Fallback straight line if directions query fails
+    return [
+      [origin.lng, origin.lat],
+      [destination.lng, destination.lat],
+    ];
+  }
+
+  // Simulation mode (moves rider along realistic path)
   useEffect(() => {
     if (!isEnRoute || !isSimulating || riderLocation) return;
 
@@ -80,7 +106,35 @@ export default function LiveTrackingMap({
     return () => clearInterval(interval);
   }, [isEnRoute, isSimulating, branchLocation, targetLocation, riderLocation]);
 
-  // Initialize Mapbox GL Map
+  // Update Rider Marker position dynamically
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (currentRiderPos && showRiderMarker) {
+      if (!riderMarkerRef.current) {
+        const riderEl = document.createElement('div');
+        riderEl.className = 'mapbox-custom-pin rider-pin';
+        riderEl.innerHTML = `
+          <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6); animation: bounce 1.5s infinite;">
+            🏍️
+          </div>
+          <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            ${riderName || 'Rider'}
+          </div>
+        `;
+        riderMarkerRef.current = new mapboxgl.Marker({ element: riderEl })
+          .setLngLat([currentRiderPos.lng, currentRiderPos.lat])
+          .addTo(mapRef.current);
+      } else {
+        riderMarkerRef.current.setLngLat([currentRiderPos.lng, currentRiderPos.lat]);
+      }
+    } else if (riderMarkerRef.current) {
+      riderMarkerRef.current.remove();
+      riderMarkerRef.current = null;
+    }
+  }, [currentRiderPos, showRiderMarker, riderName]);
+
+  // Initialize Mapbox GL Map & Road Route
   useEffect(() => {
     if (!mapContainerRef.current || !token) {
       setMapboxAvailable(false);
@@ -103,7 +157,7 @@ export default function LiveTrackingMap({
 
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
 
-      map.on('load', () => {
+      map.on('load', async () => {
         mapRef.current = map;
 
         // 1. Branch Marker
@@ -125,7 +179,7 @@ export default function LiveTrackingMap({
         const targetEl = document.createElement('div');
         targetEl.className = 'mapbox-custom-pin target-pin';
         targetEl.innerHTML = `
-          <div style="background: #10B981; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); animation: pulse 2s infinite;">
+          <div style="background: #10B981; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
             📍
           </div>
           <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -136,15 +190,15 @@ export default function LiveTrackingMap({
           .setLngLat([targetLocation.lng, targetLocation.lat])
           .addTo(map);
 
-        // 3. Live Rider Marker (Only if a rider is assigned)
+        // 3. Live Rider Marker (if already assigned)
         if (showRiderMarker && currentRiderPos) {
           const riderEl = document.createElement('div');
           riderEl.className = 'mapbox-custom-pin rider-pin';
           riderEl.innerHTML = `
-            <div style="background: #06B6D4; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(6, 182, 212, 0.5);">
+            <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6); animation: bounce 1.5s infinite;">
               🏍️
             </div>
-            <div style="font-size: 10px; font-weight: 700; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap;">
+            <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
               ${riderName || 'Rider'}
             </div>
           `;
@@ -153,56 +207,52 @@ export default function LiveTrackingMap({
             .addTo(map);
         }
 
-        // 4. Add Route Polyline
-        const coordinates = (showRiderMarker && currentRiderPos)
-          ? [
-              [branchLocation.lng, branchLocation.lat],
-              [currentRiderPos.lng, currentRiderPos.lat],
-              [targetLocation.lng, targetLocation.lat],
-            ]
-          : [
-              [branchLocation.lng, branchLocation.lat],
-              [targetLocation.lng, targetLocation.lat],
-            ];
+        // 4. Fetch Real Street Route from Mapbox Directions API
+        const startPoint = (showRiderMarker && currentRiderPos) ? currentRiderPos : branchLocation;
+        const streetCoordinates = await fetchStreetRoute(startPoint, targetLocation);
 
-        map.addSource('route', {
+        // Add Route GeoJSON Source
+        map.addSource('street-route', {
           type: 'geojson',
           data: {
             type: 'Feature',
             properties: {},
             geometry: {
               type: 'LineString',
-              coordinates,
+              coordinates: streetCoordinates,
             },
           },
         });
 
+        // Background Route Line (Soft Glowing Blue)
         map.addLayer({
-          id: 'route-line-bg',
+          id: 'street-route-bg',
           type: 'line',
-          source: 'route',
+          source: 'street-route',
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': '#BAE6FD',
+            'line-color': '#0284C7',
             'line-width': 8,
-            'line-opacity': 0.6,
+            'line-opacity': 0.25,
           },
         });
 
+        // Foreground Active Driving Line (Crisp Blue)
         map.addLayer({
-          id: 'route-line',
+          id: 'street-route-line',
           type: 'line',
-          source: 'route',
+          source: 'street-route',
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': isEnRoute ? '#0284C7' : '#94A3B8',
+            'line-color': isEnRoute ? '#0284C7' : '#0369A1',
             'line-width': 4,
-            'line-dasharray': [2, 1.5],
+            'line-opacity': 0.9,
           },
         });
 
-        // Fit bounds
+        // Fit bounds to fit the whole road network
         const bounds = new mapboxgl.LngLatBounds();
+        streetCoordinates.forEach(([lng, lat]) => bounds.extend([lng, lat]));
         bounds.extend([branchLocation.lng, branchLocation.lat]);
         bounds.extend([targetLocation.lng, targetLocation.lat]);
         if (showRiderMarker && currentRiderPos) {
@@ -219,178 +269,90 @@ export default function LiveTrackingMap({
       console.warn('Mapbox GL initialization fallback:', err);
       setMapboxAvailable(false);
     }
-  }, [token, branchLocation.lat, branchLocation.lng, targetLocation.lat, targetLocation.lng, showRiderMarker]);
+  }, [branchLocation, targetLocation, token]);
 
-  // Update Rider Marker position and route dynamically
-  useEffect(() => {
-    if (riderMarkerRef.current && currentRiderPos) {
-      riderMarkerRef.current.setLngLat([currentRiderPos.lng, currentRiderPos.lat]);
-    }
-
-    if (mapRef.current && mapRef.current.isStyleLoaded()) {
-      const source = mapRef.current.getSource('route') as mapboxgl.GeoJSONSource | undefined;
-      if (source) {
-        const coordinates = (showRiderMarker && currentRiderPos)
-          ? [
-              [branchLocation.lng, branchLocation.lat],
-              [currentRiderPos.lng, currentRiderPos.lat],
-              [targetLocation.lng, targetLocation.lat],
-            ]
-          : [
-              [branchLocation.lng, branchLocation.lat],
-              [targetLocation.lng, targetLocation.lat],
-            ];
-
-        source.setData({
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates,
-          },
-        });
-      }
-    }
-  }, [currentRiderPos, branchLocation, targetLocation, showRiderMarker]);
-
-  // Determine HUD Title & Subtitle based on status
-  function getHudContent() {
-    switch (orderStatus) {
-      case 'pending':
-        return {
-          badge: '⏳ Pending Confirmation',
-          badgeColor: '#D97706',
-          title: 'Awaiting Branch Confirmation',
-          subtitle: 'Branch staff is reviewing your booking',
-          etaText: 'Queued',
-        };
-      case 'confirmed':
-        return {
-          badge: '📋 Order Confirmed',
-          badgeColor: '#0284C7',
-          title: 'Finding Available Rider',
-          subtitle: 'Branch is assigning a nearby rider',
-          etaText: 'Assigning',
-        };
-      case 'rider_assigned':
-        return {
-          badge: '🏍️ Rider Assigned',
-          badgeColor: '#0284C7',
-          title: `${riderName || 'Rider'} Assigned`,
-          subtitle: 'Rider is preparing for pickup trip',
-          etaText: '~10 mins',
-        };
-      case 'pickup_en_route':
-        return {
-          badge: '⚡ Live GPS Feed',
-          badgeColor: '#10B981',
-          title: `${riderName || 'Rider'} on the way`,
-          subtitle: 'Heading to your pickup address',
-          etaText: `~${etaMinutes} mins`,
-        };
-      case 'picked_up':
-      case 'at_facility':
-      case 'washing':
-      case 'drying':
-      case 'folding':
-      case 'ready_for_delivery':
-        return {
-          badge: '🫧 Facility Processing',
-          badgeColor: '#0284C7',
-          title: 'Laundry at WashGo Facility',
-          subtitle: 'Wash, dry, and fold in progress',
-          etaText: 'In Facility',
-        };
-      case 'delivery_en_route':
-        return {
-          badge: '⚡ Out for Delivery',
-          badgeColor: '#10B981',
-          title: `${riderName || 'Rider'} Delivering`,
-          subtitle: 'Clean laundry is on the way back',
-          etaText: `~${etaMinutes} mins`,
-        };
-      case 'delivered':
-      case 'completed':
-        return {
-          badge: '✓ Delivered',
-          badgeColor: '#10B981',
-          title: 'Order Completed',
-          subtitle: 'Handed over successfully',
-          etaText: 'Done',
-        };
-      default:
-        return {
-          badge: 'Tracking',
-          badgeColor: '#64748B',
-          title: 'Order Tracking',
-          subtitle: 'Status updating...',
-          etaText: '—',
-        };
-    }
-  }
-
-  const hud = getHudContent();
+  const effectiveEta = routeDurationMin || etaMinutes;
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: 360,
-        borderRadius: 'var(--radius-xl)',
-        overflow: 'hidden',
-        border: '1px solid #BAE6FD',
-        boxShadow: '0 8px 24px -4px rgba(14, 165, 233, 0.12), 0 2px 6px rgba(0,0,0,0.04)',
-      }}
-    >
-      {/* Dynamic Map HUD Overlay */}
+    <div style={{
+      position: 'relative',
+      borderRadius: 'var(--radius-xl)',
+      overflow: 'hidden',
+      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+      border: '1.5px solid #BAE6FD',
+      background: '#F8FAFC',
+      height: 320,
+    }}>
+      {/* Floating Status & ETA Card */}
       <div style={{
         position: 'absolute',
         top: 12,
         left: 12,
         right: 12,
         zIndex: 10,
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '10px 14px',
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)',
+        border: '1px solid rgba(186, 230, 253, 0.8)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        padding: '10px 14px',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 4px 12px rgba(14, 165, 233, 0.12)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="pulse-dot" style={{ background: hud.badgeColor }} />
+          <div style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: isEnRoute ? '#10B981' : '#0284C7',
+            boxShadow: isEnRoute ? '0 0 10px #10B981' : 'none',
+          }} />
           <div>
-            <div style={{ fontSize: 10, color: hud.badgeColor, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {hud.badge}
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {isEnRoute ? '🚀 Live Navigation En Route' : '📍 Courier Route'}
             </div>
             <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>
-              {hud.title}
-            </div>
-            <div style={{ fontSize: 11, color: '#64748B' }}>
-              {hud.subtitle}
+              {orderNumber ? `${orderNumber} • ` : ''}{targetLabel}
             </div>
           </div>
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <span style={{ fontSize: 10, color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>ETA</span>
-          <div style={{ fontSize: 14, fontWeight: 800, color: hud.badgeColor }}>
-            {hud.etaText}
+          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
+            {routeDistanceKm ? `${routeDistanceKm} km away` : 'Estimated Arrival'}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: isEnRoute ? '#059669' : '#0284C7' }}>
+            ~{effectiveEta} mins
           </div>
         </div>
       </div>
 
-      {/* Real Mapbox Container */}
-      <div
-        ref={mapContainerRef}
-        style={{
+      {/* Mapbox Canvas */}
+      {mapboxAvailable ? (
+        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+      ) : (
+        <div style={{
           width: '100%',
           height: '100%',
-        }}
-      />
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#F0F9FF',
+          padding: 20,
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🗺️</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+            Live Street Navigation Active
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+            Rider is en route to {targetLabel} ({effectiveEta} mins ETA)
+          </div>
+        </div>
+      )}
     </div>
   );
 }
