@@ -459,6 +459,47 @@ export default function StaffOrdersPage() {
                 </div>
               )}
 
+              {/* Tier A4: Intake Discrepancy Alert */}
+              {selectedOrder.intake_discrepancy_note && (
+                <div style={{
+                  background: '#FFFBEB',
+                  border: '1.5px solid #FDE68A',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '10px 14px',
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    ⚠️ Counter Intake Discrepancy Remark
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#92400E', marginTop: 2 }}>
+                    &ldquo;{selectedOrder.intake_discrepancy_note}&rdquo;
+                  </div>
+                </div>
+              )}
+
+              {/* Photo Proofs Thumbnails */}
+              {(selectedOrder.picked_up_proof_url || selectedOrder.delivery_proof_url) && (
+                <div style={{ display: 'grid', gridTemplateColumns: selectedOrder.picked_up_proof_url && selectedOrder.delivery_proof_url ? '1fr 1fr' : '1fr', gap: 10 }}>
+                  {selectedOrder.picked_up_proof_url && (
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 'var(--radius-md)', padding: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#166534', marginBottom: 4 }}>🧺 Bag Pickup Proof</div>
+                      <div style={{ height: 90, borderRadius: 4, overflow: 'hidden' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={selectedOrder.picked_up_proof_url} alt="Pickup Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    </div>
+                  )}
+                  {selectedOrder.delivery_proof_url && (
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 'var(--radius-md)', padding: 8 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#166534', marginBottom: 4 }}>✓ Delivery Proof Handover</div>
+                      <div style={{ height: 90, borderRadius: 4, overflow: 'hidden' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={selectedOrder.delivery_proof_url} alt="Delivery Proof" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Status advancement options */}
               <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: 14 }}>
                 <h3 style={{ fontSize: 12, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>
