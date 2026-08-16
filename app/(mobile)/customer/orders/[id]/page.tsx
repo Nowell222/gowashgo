@@ -7,7 +7,8 @@ import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-mach
 import { useOrderRealtime, useRiderLocationRealtime } from '@/lib/supabase/realtime';
 import LiveTrackingMap from '@/components/maps/LiveTrackingMap';
 import PaymentModal from '@/components/payments/PaymentModal';
-import type { OrderWithDetails, OrderStatus, RiderLocation } from '@/lib/types';
+import QrCodeDisplay from '@/components/common/QrCodeDisplay';
+import type { OrderWithDetails, OrderStatus, RiderLocation, OrderRating } from '@/lib/types';
 
 // Stages in logical sequence for visualization
 const ORDER_STAGES: { key: OrderStatus; label: string; icon: string; desc: string }[] = [
@@ -36,6 +37,13 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
   const [paymentReceipt, setPaymentReceipt] = useState<any | null>(null);
   const [error, setError] = useState('');
 
+  // Star Rating state (Tier B2)
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingNote, setRatingNote] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [existingRating, setExistingRating] = useState<OrderRating | null>(null);
+
   async function loadOrder() {
     try {
       const res = await fetch(`/api/orders/${id}`);
@@ -54,6 +62,19 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
             });
           }
         } catch {}
+
+        // Fetch rating if completed
+        if (['delivered', 'completed'].includes(json.data.status)) {
+          fetch(`/api/orders/${id}/rating`)
+            .then((r) => r.json())
+            .then((rJson) => {
+              if (rJson.data) {
+                setExistingRating(rJson.data);
+                setRatingSubmitted(true);
+              }
+            })
+            .catch(() => {});
+        }
       } else {
         setError(json.error?.message || 'Failed to load order');
       }
@@ -98,7 +119,8 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'cancelled',
-          note: 'Cancelled by customer',
+          cancellation_reason: 'Cancelled by customer',
+          note: 'Customer requested cancellation',
         }),
       });
       const json = await res.json();
@@ -108,30 +130,54 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         loadOrder();
       }
     } catch {
-      alert('Error cancelling order');
+      alert('Network error cancelling order');
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleRatingSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmittingRating(true);
+    try {
+      const res = await fetch(`/api/orders/${id}/rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stars: ratingStars,
+          note: ratingNote.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setExistingRating(json.data);
+        setRatingSubmitted(true);
+      } else {
+        alert(json.error?.message || 'Failed to submit rating');
+      }
+    } catch {
+      alert('Error submitting rating');
+    } finally {
+      setSubmittingRating(false);
     }
   }
 
   if (loading) {
     return (
       <div className="fade-in">
-        <div className="skeleton" style={{ height: 28, width: '50%', marginBottom: 12 }} />
-        <div className="skeleton" style={{ height: 120, borderRadius: 'var(--radius-lg)', marginBottom: 16 }} />
-        <div className="skeleton" style={{ height: 200, borderRadius: 'var(--radius-lg)' }} />
+        <div className="skeleton" style={{ height: 28, width: '40%', marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 200, borderRadius: 'var(--radius-lg)', marginBottom: 16 }} />
+        <div className="skeleton" style={{ height: 120, borderRadius: 'var(--radius-lg)' }} />
       </div>
     );
   }
 
-  if (!order || error) {
+  if (error || !order) {
     return (
-      <div className="fade-in empty-state">
-        <div className="empty-state__icon">⚠️</div>
-        <p className="empty-state__title">Order Not Found</p>
-        <p className="empty-state__description">{error || 'Could not find the requested order.'}</p>
-        <Link href="/customer/orders" className="btn btn--secondary" style={{ marginTop: 'var(--space-4)' }}>
-          ← Back to Orders
+      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+        <p style={{ color: 'var(--color-danger)' }}>{error || 'Order not found'}</p>
+        <Link href="/customer/orders" className="btn btn--secondary btn--sm" style={{ marginTop: 'var(--space-4)' }}>
+          ← Back to My Orders
         </Link>
       </div>
     );
@@ -149,7 +195,7 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
 
   // Show Mapbox map for all active orders
   const showLiveMap = !isCancelled;
-  const isPickupStage = ['pending', 'confirmed', 'rider_assigned', 'pickup_en_route', 'picked_up'].includes(order.status);
+  const isPickupStage = ['pending', 'confirmed', 'rider_assigned', 'pickup_en_route'].includes(order.status);
 
   return (
     <div className="fade-in" style={{ paddingBottom: 'var(--space-10)' }}>
@@ -199,6 +245,38 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      {/* ================= TIER A1: On-Screen QR Pass for Pickup ================= */}
+      {isPickupStage && !isCancelled && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <QrCodeDisplay
+            value={order.order_number}
+            orderNumber={order.order_number}
+            label="Show this screen to your rider at pickup"
+          />
+        </div>
+      )}
+
+      {/* ================= TIER A4: Intake Discrepancy Alert ================= */}
+      {order.intake_discrepancy_note && (
+        <div style={{
+          marginBottom: 'var(--space-4)',
+          background: '#FFFBEB',
+          border: '1.5px solid #FDE68A',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px 14px',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>⚠️</span> Facility Intake Remark
+          </div>
+          <p style={{ fontSize: 13, color: '#92400E', fontWeight: 600, margin: '4px 0 0', lineHeight: 1.4 }}>
+            &ldquo;{order.intake_discrepancy_note}&rdquo;
+          </p>
+          <div style={{ fontSize: 11, color: '#B45309', marginTop: 4 }}>
+            Our staff inspected your items upon arrival. Your clothes are handled with extra care!
+          </div>
+        </div>
+      )}
+
       {/* ETA Banner */}
       {!isCancelled && order.delivery_estimated_at && (
         <div className="card" style={{
@@ -224,7 +302,9 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
       {/* Cancelled Banner */}
       {isCancelled && (
         <div className="toast toast--error" style={{ marginBottom: 'var(--space-4)' }}>
-          <div className="toast__message">This order was cancelled.</div>
+          <div className="toast__message">
+            This order was cancelled. {order.cancellation_reason ? `Reason: ${order.cancellation_reason}` : ''}
+          </div>
         </div>
       )}
 
@@ -298,7 +378,7 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
                   <div style={{ fontSize: 'var(--text-sm)', fontWeight: isCurrent ? 800 : 600, color: isCurrent ? '#0284C7' : '#0F172A' }}>
                     {stage.label}
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: '#64748B' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>
                     {stage.desc}
                   </div>
                 </div>
@@ -308,74 +388,40 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Items & AI Wash Advice Breakdown (if logged at facility) */}
-      {order.order_items && order.order_items.length > 0 && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-3)', color: '#0F172A' }}>
-            Laundry Items &amp; AI Care Rules
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {order.order_items.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  padding: '12px 14px',
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: '#0F172A' }}>
-                    {item.quantity}x {item.clothing_type.replace('_', ' ')}
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0284C7', background: '#E0F2FE', padding: '2px 8px', borderRadius: 4 }}>
-                    Included in Load
-                  </div>
-                </div>
-
-              <div style={{ fontSize: 'var(--text-xs)', color: '#64748B', marginTop: 2 }}>
-                Fabric: {item.fabric_type} • Tone: {item.color_category}
-                {item.has_stains && ` • Stain: ${item.stain_description || 'Yes'}`}
-              </div>
-
-              {item.wash_recommendation && (
-                <div style={{
-                  marginTop: 6,
-                  padding: '6px 10px',
-                  borderRadius: 'var(--radius-sm)',
-                  background: '#F0F9FF',
-                  border: '1px solid #BAE6FD',
-                  fontSize: '11px',
-                  color: '#0369A1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}>
-                  <span>🫧</span>
-                  <span>
-                    Cycle: <strong>{item.wash_recommendation.wash_program}</strong> ({item.wash_recommendation.water_temp} water)
-                    {item.wash_recommendation.special_handling?.length > 0 && ` • ${item.wash_recommendation.special_handling.join(', ')}`}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+      {/* ================= TIER A3: Proof of Pickup Photo Card ================= */}
+      {order.picked_up_proof_url && (
+        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              🧺 Bag Pickup Proof
+            </span>
+            <span style={{ fontSize: 10, background: '#DCFCE7', color: '#15803D', fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>
+              Verified Handover
+            </span>
+          </div>
+          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', height: 160, border: '1px solid #86EFAC' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={order.picked_up_proof_url}
+              alt="Pickup Handover Proof"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-      {/* Delivery Handover Proof (if delivered) */}
+      {/* Proof of Delivery Photo Card */}
       {order.delivery_proof_url && (
         <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               ✓ Delivery Proof Handover
-            </div>
-            <span style={{ fontSize: 11, color: '#15803D', fontWeight: 700 }}>Verified</span>
+            </span>
+            <span style={{ fontSize: 10, background: '#DCFCE7', color: '#15803D', fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>
+              Verified
+            </span>
           </div>
-          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', height: 160 }}>
+          <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', height: 160, border: '1px solid #86EFAC' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={order.delivery_proof_url}
@@ -386,41 +432,40 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {/* Bill & Logistics Breakdown */}
-      <div className="card" style={{ marginBottom: 'var(--space-5)' }}>
+      {/* Payment & Logistics Summary Card */}
+      <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
         <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-3)', color: '#0F172A' }}>
           Payment &amp; Weighing Summary
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-sm)' }}>
-          {/* Payment Method Badge */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
+            <span>Branch</span>
+            <span style={{ fontWeight: 600, color: '#0F172A' }}>{order.branch?.name || 'San Juan Hub'}</span>
+          </div>
+
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            background: '#F0F9FF',
             padding: '8px 12px',
-            borderRadius: 'var(--radius-sm)',
-            background: order.payment_method === 'online' ? '#EFF6FF' : '#FEF3C7',
-            border: order.payment_method === 'online' ? '1px solid #BFDBFE' : '1px solid #FDE68A',
-            marginBottom: 4,
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid #BAE6FD',
           }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: order.payment_method === 'online' ? '#1E40AF' : '#92400E' }}>
-              Payment Method: {order.payment_method === 'online' ? '💳 Online (GCash/Maya/Card)' : '💵 Cash on Delivery (COD)'}
+            <span style={{ color: '#0369A1', fontWeight: 700, fontSize: 'var(--text-xs)' }}>Payment Method:</span>
+            <span style={{ fontWeight: 800, color: '#0284C7' }}>
+              {order.payment_method === 'online' ? '💳 Online (GCash/Maya/Card)' : '💵 Cash on Delivery (COD)'}
             </span>
-            {order.cash_collected ? (
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: 4 }}>
-                Cash Collected
-              </span>
-            ) : null}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
             <span>Pickup Address</span>
-            <span style={{ color: '#0F172A', maxWidth: 200, textAlign: 'right', fontWeight: 500 }}>{order.pickup_address}</span>
+            <span style={{ color: '#0F172A', maxWidth: 200, textAlign: 'right' }}>{order.pickup_address}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
             <span>Delivery Address</span>
-            <span style={{ color: '#0F172A', maxWidth: 200, textAlign: 'right', fontWeight: 500 }}>{order.delivery_address}</span>
+            <span style={{ color: '#0F172A', maxWidth: 200, textAlign: 'right' }}>{order.delivery_address}</span>
           </div>
           {order.special_instructions && (
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
@@ -530,6 +575,71 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
         >
           💳 Pay {formatPeso(order.total)} Online (GCash / Maya / Card)
         </button>
+      )}
+
+      {/* ================= TIER B2: Lightweight Customer Rating Prompt ================= */}
+      {['delivered', 'completed'].includes(order.status) && (
+        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F8FAFC', border: '1.5px solid #BAE6FD' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>
+            ⭐ Rate Your Laundry Experience
+          </h3>
+          <p style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+            How was our wash quality and delivery speed?
+          </p>
+
+          {ratingSubmitted ? (
+            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 12, borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+              <div style={{ fontSize: 20 }}>{'⭐'.repeat(existingRating?.stars || ratingStars)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#065F46', marginTop: 4 }}>
+                Thank you for your feedback!
+              </div>
+              {existingRating?.note && (
+                <div style={{ fontSize: 11, color: '#047857', marginTop: 2, fontStyle: 'italic' }}>
+                  &ldquo;{existingRating.note}&rdquo;
+                </div>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleRatingSubmit}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRatingStars(star)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: 28,
+                      cursor: 'pointer',
+                      filter: star <= ratingStars ? 'none' : 'grayscale(100%) opacity(30%)',
+                      transition: 'transform 0.15s',
+                    }}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Optional review note (e.g. fresh smell, on-time rider)..."
+                  value={ratingNote}
+                  onChange={(e) => setRatingNote(e.target.value)}
+                  style={{ fontSize: 12 }}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn--primary btn--full btn--sm"
+                disabled={submittingRating}
+              >
+                {submittingRating ? 'Submitting...' : 'Submit Rating ⭐'}
+              </button>
+            </form>
+          )}
+        </div>
       )}
 
       {/* Action buttons */}
