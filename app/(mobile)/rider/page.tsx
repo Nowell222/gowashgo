@@ -6,6 +6,7 @@ import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
 import { useRiderGpsTracker } from '@/lib/tracking/rider-gps';
 import LiveTrackingMap from '@/components/maps/LiveTrackingMap';
+import PhotoCapture from '@/components/common/PhotoCapture';
 import type { OrderWithDetails, OrderStatus } from '@/lib/types';
 
 export default function RiderHomePage() {
@@ -14,11 +15,14 @@ export default function RiderHomePage() {
   const [updating, setUpdating] = useState(false);
   const [gpsEmissionEnabled, setGpsEmissionEnabled] = useState(true);
 
-  // In-app Handover Modal state
+  // In-app Handover Modal state (Delivery)
   const [isHandoverOpen, setIsHandoverOpen] = useState(false);
   const [cashCollected, setCashCollected] = useState(false);
   const [deliveryProofUrl, setDeliveryProofUrl] = useState('');
-  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+
+  // In-app Pickup Confirmation Modal state (Tier A1 & A3)
+  const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
+  const [pickupProofUrl, setPickupProofUrl] = useState('');
 
   // In-app Alert / Dialog Modal state (replaces ugly browser alert)
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
@@ -34,6 +38,7 @@ export default function RiderHomePage() {
         setActiveOrder(current || null);
         if (current?.cash_collected) setCashCollected(true);
         if (current?.delivery_proof_url) setDeliveryProofUrl(current.delivery_proof_url);
+        if (current?.picked_up_proof_url) setPickupProofUrl(current.picked_up_proof_url);
       }
     } catch (err) {
       console.error('Error loading rider active assignment:', err);
@@ -64,6 +69,12 @@ export default function RiderHomePage() {
   async function handleAdvanceStatus(targetStatus: OrderStatus) {
     if (!activeOrder) return;
 
+    // If attempting to pickup, open pickup proof modal
+    if (targetStatus === 'picked_up') {
+      setIsPickupModalOpen(true);
+      return;
+    }
+
     // If attempting to deliver, open handover modal
     if (targetStatus === 'delivered') {
       setIsHandoverOpen(true);
@@ -93,6 +104,41 @@ export default function RiderHomePage() {
     }
   }
 
+  // Complete Pickup with Bag Proof Photo
+  async function handleConfirmPickup() {
+    if (!activeOrder) return;
+
+    if (!pickupProofUrl) {
+      setSystemAlert('A photo proof of bag pickup is required to confirm pickup. Please take a photo or select an image.');
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/orders/${activeOrder.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'picked_up',
+          note: 'Rider confirmed bag pickup with proof photo',
+          picked_up_proof_url: pickupProofUrl,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        setIsPickupModalOpen(false);
+        loadActiveOrder();
+      } else {
+        setSystemAlert(json.error?.message || 'Failed to confirm pickup');
+      }
+    } catch {
+      setSystemAlert('Network error confirming pickup');
+    } finally {
+      setUpdating(false);
+    }
+  }
+
   // Complete Handover inside In-App Modal
   async function handleConfirmHandover() {
     if (!activeOrder) return;
@@ -103,7 +149,7 @@ export default function RiderHomePage() {
     }
 
     if (!deliveryProofUrl) {
-      setSystemAlert('A delivery handover proof photo is required to complete delivery.');
+      setSystemAlert('A delivery handover proof photo is required to complete delivery. Please take a photo or select an image.');
       return;
     }
 
@@ -134,106 +180,83 @@ export default function RiderHomePage() {
     }
   }
 
-  function handleSnapProof() {
-    setIsCapturingPhoto(true);
-    setTimeout(() => {
-      setDeliveryProofUrl('https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=600&q=80');
-      setIsCapturingPhoto(false);
-    }, 500);
-  }
-
   if (loading) {
     return (
       <div className="fade-in">
-        <div className="skeleton" style={{ height: 28, width: '50%', marginBottom: 12 }} />
-        <div className="skeleton" style={{ height: 160, borderRadius: 'var(--radius-lg)', marginBottom: 16 }} />
-        <div className="skeleton" style={{ height: 100, borderRadius: 'var(--radius-lg)' }} />
+        <div className="skeleton" style={{ height: 28, width: '40%', marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 220, borderRadius: 'var(--radius-lg)', marginBottom: 16 }} />
+        <div className="skeleton" style={{ height: 160, borderRadius: 'var(--radius-lg)' }} />
       </div>
     );
   }
 
-  const isPickupStage = activeOrder?.status === 'rider_assigned' || activeOrder?.status === 'pickup_en_route';
+  const isPickupStage = activeOrder && ['rider_assigned', 'pickup_en_route'].includes(activeOrder.status);
 
   return (
     <div className="fade-in" style={{ paddingBottom: 'var(--space-10)' }}>
-      {/* Top Bar */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
         <div>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em' }}>
             Rider Cockpit
           </h1>
-          <p style={{ color: '#64748B', fontSize: 'var(--text-xs)' }}>
+          <p style={{ color: '#64748B', fontSize: 'var(--text-xs)', marginTop: 2 }}>
             Active pickup &amp; delivery assignment
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div className="pulse-dot" style={{ background: '#10B981' }} />
-          <span style={{ fontSize: 'var(--text-xs)', color: '#059669', fontWeight: 700 }}>Online</span>
+          <div className="pulse-dot" />
+          <span style={{ fontSize: '11px', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>
+            Online
+          </span>
         </div>
       </div>
 
-      {/* GPS Emitter Status Bar */}
-      {activeOrder && (
-        <div className="card" style={{
-          padding: '10px 14px',
-          marginBottom: 'var(--space-4)',
-          background: '#F0F9FF',
-          border: '1px solid #BAE6FD',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13 }}>🛰️</span>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: isTracking ? '#0284C7' : '#64748B' }}>
-                {isTracking ? 'GPS Broadcasting Active' : 'GPS Telemetry Idle'}
-              </span>
-              {wakeLockActive && (
-                <span className="status-badge status-badge--success" style={{ fontSize: 9, padding: '1px 5px' }}>
-                  Screen On
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
-              {pingsSent} pings transmitted • {lastPingTime ? `Last: ${lastPingTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Standby'}
-            </div>
-          </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#0284C7' }}>
-            <input
-              type="checkbox"
-              checked={gpsEmissionEnabled}
-              onChange={(e) => setGpsEmissionEnabled(e.target.checked)}
-              style={{ accentColor: '#0284C7' }}
-            />
-            <span>Broadcast</span>
-          </label>
-        </div>
-      )}
-
-      {gpsError && (
-        <div className="toast toast--warning" style={{ marginBottom: 'var(--space-3)' }}>
-          <div className="toast__message">GPS notice: {gpsError}. Running simulated telemetry.</div>
-        </div>
-      )}
-
       {!activeOrder ? (
-        <div className="card" style={{ textAlign: 'center', padding: 'var(--space-10) var(--space-4)' }}>
-          <div className="empty-state__icon" style={{ margin: '0 auto var(--space-4)' }}>🏍️</div>
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>
-            Ready for Next Assignment
-          </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: '#64748B' }}>
-            You have no active assignments right now. Branch staff will assign new orders to you as they arrive.
+        <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: 'var(--space-3)' }}>🛵</div>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: '#0F172A' }}>No Active Job Assigned</h3>
+          <p style={{ color: '#64748B', fontSize: 'var(--text-xs)', marginTop: 4, maxWidth: 280, margin: '4px auto 16px' }}>
+            You are ready and on standby. New dispatch assignments from the branch manager will appear here in real time.
           </p>
-          <Link href="/rider/orders" className="btn btn--secondary btn--sm" style={{ marginTop: 'var(--space-5)' }}>
-            View Assigned Queue →
+          <Link href="/rider/orders" className="btn btn--secondary btn--sm">
+            View All Branch Orders →
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {/* Live Map Preview for Rider */}
+        <div>
+          {/* Real-time Telemetry Bar */}
+          <div className="card" style={{
+            marginBottom: 'var(--space-3)',
+            background: isTracking ? '#F0FDF4' : '#FFFBEB',
+            border: isTracking ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+            padding: '10px 14px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>{isTracking ? '📡' : '⚠️'}</span>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: isTracking ? '#166534' : '#92400E' }}>
+                    {isTracking ? 'GPS Live Tracking Active' : 'Waiting for GPS Lock'}
+                  </div>
+                  <div style={{ fontSize: '10px', color: isTracking ? '#15803D' : '#B45309' }}>
+                    {pingsSent} pings transmitted • {wakeLockActive ? 'Screen lock prevented' : 'Screen normal'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() => setGpsEmissionEnabled(!gpsEmissionEnabled)}
+                style={{ fontSize: '10px', padding: '4px 8px' }}
+              >
+                {gpsEmissionEnabled ? 'Pause' : 'Resume'}
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Mapbox Courier Map */}
           <LiveTrackingMap
             branchLocation={activeOrder.branch ? {
               lat: activeOrder.branch.latitude,
@@ -357,6 +380,83 @@ export default function RiderHomePage() {
         </div>
       )}
 
+      {/* ================= IN-APP PICKUP CONFIRMATION MODAL (Tier A1 & A3) ================= */}
+      {isPickupModalOpen && activeOrder && (
+        <div className="modal-backdrop" onClick={() => setIsPickupModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__header">
+              <div>
+                <h2 className="modal__title">Confirm Laundry Pickup</h2>
+                <div style={{ fontSize: 12, color: '#64748B' }}>Order {activeOrder.order_number}</div>
+              </div>
+              <button className="modal__close" onClick={() => setIsPickupModalOpen(false)}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Order Verification Notice */}
+              <div style={{
+                background: '#F0F9FF',
+                border: '1px solid #BAE6FD',
+                borderRadius: 'var(--radius-md)',
+                padding: '12px 14px',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  📱 Customer Order Verification
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginTop: 4 }}>
+                  Order: <span style={{ fontFamily: 'var(--font-mono)', color: '#0284C7' }}>{activeOrder.order_number}</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                  Check customer&apos;s on-screen QR Pass or hand-written tape tag.
+                </div>
+              </div>
+
+              {/* REAL Device Camera / File Upload for Pickup Photo Proof */}
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px',
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
+                  🧺 Mandatory Bag Pickup Photo
+                </div>
+
+                <PhotoCapture
+                  value={pickupProofUrl}
+                  onChange={(dataUrl) => setPickupProofUrl(dataUrl)}
+                  onClear={() => setPickupProofUrl('')}
+                  buttonText="📷 Snap / Choose Bag Photo"
+                  label="Bag Pickup Proof"
+                  disabled={updating}
+                />
+              </div>
+
+              {/* Confirm Pickup Button */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setIsPickupModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  style={{ flex: 2 }}
+                  disabled={updating || !pickupProofUrl}
+                  onClick={handleConfirmPickup}
+                >
+                  {updating ? <span className="btn__spinner" /> : 'Confirm Pickup ✓'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ================= IN-APP HANDOVER & COMPLETION MODAL ================= */}
       {isHandoverOpen && activeOrder && (
         <div className="modal-backdrop" onClick={() => setIsHandoverOpen(false)}>
@@ -418,7 +518,7 @@ export default function RiderHomePage() {
                 </div>
               )}
 
-              {/* Photo Proof */}
+              {/* REAL Device Camera / File Upload for Delivery Photo Proof */}
               <div style={{
                 background: '#F8FAFC',
                 border: '1px solid #E2E8F0',
@@ -429,44 +529,14 @@ export default function RiderHomePage() {
                   📸 Mandatory Delivery Proof Photo
                 </div>
 
-                {deliveryProofUrl ? (
-                  <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden', height: 140 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={deliveryProofUrl}
-                      alt="Delivery Proof"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryProofUrl('')}
-                      style={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        background: 'rgba(0,0,0,0.7)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        fontSize: 11,
-                        padding: '4px 8px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Retake ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--full"
-                    onClick={handleSnapProof}
-                    disabled={isCapturingPhoto}
-                    style={{ border: '1.5px dashed #0284C7', color: '#0284C7', fontWeight: 700 }}
-                  >
-                    {isCapturingPhoto ? '📸 Capturing...' : '📷 Snap / Attach Handover Photo'}
-                  </button>
-                )}
+                <PhotoCapture
+                  value={deliveryProofUrl}
+                  onChange={(dataUrl) => setDeliveryProofUrl(dataUrl)}
+                  onClear={() => setDeliveryProofUrl('')}
+                  buttonText="📷 Snap / Choose Handover Photo"
+                  label="Delivery Handover Proof"
+                  disabled={updating}
+                />
               </div>
 
               {/* Confirm Completion Button */}

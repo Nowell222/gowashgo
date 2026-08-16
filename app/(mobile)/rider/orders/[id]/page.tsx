@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor, getNextStatuses } from '@/lib/orders/status-machine';
 import { useRiderGpsTracker } from '@/lib/tracking/rider-gps';
 import LiveTrackingMap from '@/components/maps/LiveTrackingMap';
+import PhotoCapture from '@/components/common/PhotoCapture';
 import type { OrderWithDetails, OrderStatus } from '@/lib/types';
 
 export default function RiderOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,7 +19,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
   // Delivery Handover verification state
   const [cashCollected, setCashCollected] = useState(false);
   const [deliveryProofUrl, setDeliveryProofUrl] = useState<string>('');
-  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+  const [pickupProofUrl, setPickupProofUrl] = useState<string>('');
 
   async function loadOrder() {
     try {
@@ -28,6 +29,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
         setOrder(json.data);
         if (json.data.cash_collected) setCashCollected(true);
         if (json.data.delivery_proof_url) setDeliveryProofUrl(json.data.delivery_proof_url);
+        if (json.data.picked_up_proof_url) setPickupProofUrl(json.data.picked_up_proof_url);
       }
     } catch (err) {
       console.error('Error loading rider order detail:', err);
@@ -53,6 +55,13 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
   async function handleAdvanceStatus(targetStatus: OrderStatus) {
+    if (targetStatus === 'picked_up') {
+      if (!pickupProofUrl) {
+        setSystemAlert('Please take or upload a photo proof of the laundry bag before confirming pickup.');
+        return;
+      }
+    }
+
     if (targetStatus === 'delivered') {
       if (order?.payment_method === 'cash' && !cashCollected) {
         setSystemAlert('Please confirm that you have collected the cash from the customer.');
@@ -74,6 +83,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
           note: `Rider advanced status to ${targetStatus}`,
           cash_collected: cashCollected,
           delivery_proof_url: deliveryProofUrl || undefined,
+          picked_up_proof_url: pickupProofUrl || undefined,
         }),
       });
       const json = await res.json();
@@ -87,16 +97,6 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
     } finally {
       setUpdating(false);
     }
-  }
-
-  // Simulated Delivery Proof Photo (for fast testing on localhost/laptop)
-  function handleSnapProofPhoto() {
-    setIsCapturingPhoto(true);
-    setTimeout(() => {
-      // Sample high quality delivery handover image URL
-      setDeliveryProofUrl('https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=600&q=80');
-      setIsCapturingPhoto(false);
-    }, 600);
   }
 
   // Simulated GPS Step emitter (for testing on laptop/localhost)
@@ -142,10 +142,10 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
 
   if (!order) {
     return (
-      <div className="fade-in empty-state">
-        <p className="empty-state__title">Order Not Found</p>
-        <Link href="/rider/orders" className="btn btn--secondary" style={{ marginTop: 'var(--space-4)' }}>
-          ← Back to Orders
+      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+        <p style={{ color: 'var(--color-danger)' }}>Order not found</p>
+        <Link href="/rider" className="btn btn--secondary btn--sm" style={{ marginTop: 'var(--space-4)' }}>
+          ← Back to Cockpit
         </Link>
       </div>
     );
@@ -156,39 +156,27 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="fade-in" style={{ paddingBottom: 'var(--space-10)' }}>
-      {/* Top Bar */}
+      {/* Top Navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-        <Link href="/rider/orders" style={{ fontSize: 'var(--text-sm)', color: '#0284C7', fontWeight: 600 }}>
-          ← Back to Jobs
+        <Link href="/rider" style={{ fontSize: 'var(--text-sm)', color: '#0284C7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+          ← Back to Cockpit
         </Link>
         <span className={`status-badge status-badge--${statusColor}`}>
           {formatOrderStatus(order.status as OrderStatus)}
         </span>
       </div>
 
+      {/* Title */}
       <div style={{ marginBottom: 'var(--space-4)' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em' }}>
+        <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
           {order.order_number}
         </h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
-          <span style={{ color: '#64748B', fontSize: 'var(--text-xs)' }}>
-            Branch: {order.branch?.name}
-          </span>
-          <span style={{
-            fontSize: 10,
-            fontWeight: 800,
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: order.payment_method === 'online' ? '#EFF6FF' : '#FEF3C7',
-            color: order.payment_method === 'online' ? '#1D4ED8' : '#B45309',
-            textTransform: 'uppercase',
-          }}>
-            {order.payment_method === 'online' ? '💳 Online Payment' : '💵 Cash on Delivery'}
-          </span>
-        </div>
+        <p style={{ color: '#64748B', fontSize: 'var(--text-xs)', marginTop: 2 }}>
+          {order.branch?.name} • Placed {new Date(order.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+        </p>
       </div>
 
-      {/* Mapbox Route Preview */}
+      {/* Live Map Box */}
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <LiveTrackingMap
           branchLocation={order.branch ? {
@@ -201,46 +189,76 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
             lng: isPickupStage ? order.pickup_longitude : order.delivery_longitude,
           }}
           riderLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : null}
+          riderName="You (Courier)"
+          orderStatus={order.status}
           targetLabel={isPickupStage ? 'Customer Pickup' : 'Customer Delivery'}
           orderNumber={order.order_number}
           isSimulating={!currentLocation}
         />
       </div>
 
-      {/* Telemetry Broadcast Card */}
+      {/* Telemetry Status Bar */}
       {isEnRoute && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div className="pulse-dot" style={{ background: '#0284C7' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#0369A1' }}>
-                GPS Telemetry Broadcast Active
-              </span>
+        <div className="card" style={{
+          marginBottom: 'var(--space-4)',
+          background: isTracking ? '#F0FDF4' : '#FFFBEB',
+          border: isTracking ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{isTracking ? '📡' : '⚠️'}</span>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: isTracking ? '#166534' : '#92400E' }}>
+                  {isTracking ? 'Device GPS Telemetry Active' : 'Acquiring GPS Signal'}
+                </div>
+                <div style={{ fontSize: '10px', color: isTracking ? '#15803D' : '#B45309' }}>
+                  {pingsSent} pings sent {lastPingTime ? `• Last: ${lastPingTime.toLocaleTimeString()}` : ''}
+                </div>
+              </div>
             </div>
-            <span style={{ fontSize: 11, color: '#0284C7', fontWeight: 600 }}>
-              {pingsSent} pings sent
-            </span>
-          </div>
 
-          <button
-            type="button"
-            className="btn btn--secondary btn--sm btn--full"
-            style={{ border: '1px solid #BAE6FD', color: '#0284C7', fontWeight: 700 }}
-            onClick={handleSimulateGpsStep}
-          >
-            📍 Emit Live Test Movement Ping (Step {simStep + 1}/10)
-          </button>
+            {/* Quick simulation trigger for testing */}
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              onClick={handleSimulateGpsStep}
+              style={{ fontSize: '10px', padding: '4px 8px' }}
+            >
+              Simulate Move 🛵
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ================= PAYMENT-GATED COMPLETION CARD (When Delivering) ================= */}
-      {isDeliveryStage && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#FFFFFF', border: '2px solid #0284C7' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#0284C7', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>
-            Handover &amp; Completion Requirements
+      {/* Pickup Photo Proof Box (if in pickup_en_route) */}
+      {order.status === 'pickup_en_route' && (
+        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F8FAFC', border: '1.5px solid #BAE6FD' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
+            🧺 Bag Pickup Photo Proof
           </div>
+          <PhotoCapture
+            value={pickupProofUrl}
+            onChange={(dataUrl) => setPickupProofUrl(dataUrl)}
+            onClear={() => setPickupProofUrl('')}
+            buttonText="📷 Snap / Choose Bag Photo"
+            label="Bag Pickup Proof"
+            disabled={updating}
+          />
+        </div>
+      )}
 
-          {/* Payment Requirement */}
+      {/* Delivery Handover Card (if delivery en route) */}
+      {isDeliveryStage && (
+        <div className="card" style={{
+          marginBottom: 'var(--space-4)',
+          border: '1.5px solid #BAE6FD',
+          background: '#FFFFFF',
+        }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
+            Delivery Handover Checklist
+          </h3>
+
+          {/* Cash Collection Confirmation */}
           {order.payment_method === 'cash' ? (
             <div style={{
               background: '#FFFBEB',
@@ -250,22 +268,21 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
               marginBottom: 12,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#92400E' }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#92400E' }}>
                   💵 Cash to Collect:
                 </span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: '#B45309' }}>
                   {formatPeso(order.total)}
                 </span>
               </div>
-
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#92400E', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={cashCollected}
                   onChange={(e) => setCashCollected(e.target.checked)}
-                  style={{ accentColor: '#D97706', width: 18, height: 18 }}
+                  style={{ accentColor: '#D97706', width: 16, height: 16 }}
                 />
-                I have collected {formatPeso(order.total)} in cash from customer
+                I have collected {formatPeso(order.total)} from the customer
               </label>
             </div>
           ) : (
@@ -273,7 +290,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
               background: '#EFF6FF',
               border: '1px solid #BFDBFE',
               borderRadius: 'var(--radius-md)',
-              padding: '12px 14px',
+              padding: '10px 14px',
               marginBottom: 12,
               display: 'flex',
               alignItems: 'center',
@@ -291,7 +308,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
             </div>
           )}
 
-          {/* Delivery Proof Photo */}
+          {/* REAL Device Camera / File Upload for Delivery Photo Proof */}
           <div style={{
             background: '#F8FAFC',
             border: '1px solid #E2E8F0',
@@ -303,44 +320,14 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
               📸 Mandatory Delivery Proof Photo
             </div>
 
-            {deliveryProofUrl ? (
-              <div style={{ position: 'relative', borderRadius: 'var(--radius-sm)', overflow: 'hidden', height: 120 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={deliveryProofUrl}
-                  alt="Delivery Proof"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setDeliveryProofUrl('')}
-                  style={{
-                    position: 'absolute',
-                    top: 6,
-                    right: 6,
-                    background: 'rgba(0,0,0,0.7)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 4,
-                    fontSize: 10,
-                    padding: '2px 6px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Retake ✕
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="btn btn--secondary btn--sm btn--full"
-                onClick={handleSnapProofPhoto}
-                disabled={isCapturingPhoto}
-                style={{ border: '1px solid #CBD5E1', color: '#0F172A', fontWeight: 700 }}
-              >
-                {isCapturingPhoto ? '📸 Capturing...' : '📷 Snap / Attach Handover Photo'}
-              </button>
-            )}
+            <PhotoCapture
+              value={deliveryProofUrl}
+              onChange={(dataUrl) => setDeliveryProofUrl(dataUrl)}
+              onClear={() => setDeliveryProofUrl('')}
+              buttonText="📷 Snap / Choose Handover Photo"
+              label="Delivery Handover Proof"
+              disabled={updating}
+            />
           </div>
         </div>
       )}
@@ -357,7 +344,11 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
                 key={status}
                 type="button"
                 className="btn btn--primary btn--full btn--lg"
-                disabled={updating || (status === 'delivered' && ((order.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl))}
+                disabled={
+                  updating ||
+                  (status === 'picked_up' && !pickupProofUrl) ||
+                  (status === 'delivered' && ((order.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl))
+                }
                 onClick={() => handleAdvanceStatus(status)}
               >
                 {updating ? <span className="btn__spinner" /> : `Mark as "${formatOrderStatus(status)}"`}
