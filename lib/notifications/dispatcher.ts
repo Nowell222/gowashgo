@@ -61,13 +61,14 @@ interface OrderStatusNotificationOptions {
   customerId: string;
   riderName?: string | null;
   branchName?: string | null;
+  cancellationReason?: string | null;
 }
 
 /**
  * Helper to dispatch automated notifications on order status transitions.
  */
 export async function dispatchOrderStatusNotification(options: OrderStatusNotificationOptions) {
-  const { orderId, orderNumber, status, customerId, riderName, branchName } = options;
+  const { orderId, orderNumber, status, customerId, riderName, branchName, cancellationReason } = options;
 
   let title = '';
   let body = '';
@@ -135,7 +136,7 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
 
     case 'cancelled':
       title = 'Order Cancelled ❌';
-      body = `Order ${orderNumber} has been cancelled.`;
+      body = `Order ${orderNumber} has been cancelled.${cancellationReason ? ` Reason: ${cancellationReason}` : ''}`;
       break;
 
     default:
@@ -147,6 +148,25 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
     orderId,
     title,
     body,
+    channel: 'web_push',
+  });
+}
+
+/**
+ * Helper to dispatch notification when staff records an intake discrepancy or item note.
+ */
+export async function dispatchDiscrepancyNotification(options: {
+  orderId: string;
+  orderNumber: string;
+  customerId: string;
+  discrepancyNote: string;
+}) {
+  const { orderId, orderNumber, customerId, discrepancyNote } = options;
+  return dispatchNotification({
+    userId: customerId,
+    orderId,
+    title: 'Intake Inspection Note ⚠️',
+    body: `Staff noted a remark for order ${orderNumber}: "${discrepancyNote}". Your laundry is being carefully handled.`,
     channel: 'web_push',
   });
 }

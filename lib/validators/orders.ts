@@ -59,6 +59,7 @@ export const createOrderSchema = z.object({
 export const staffIntakeSchema = z.object({
   weight_kg: z.number().positive('Weight must be greater than 0 kg'),
   notes: z.string().max(500).nullish(),
+  intake_discrepancy_note: z.string().max(500).nullish(),
   clothing_types: z.array(clothingTypeEnum).optional().default(['shirt']),
   fabric_types: z.array(fabricTypeEnum).optional().default(['cotton']),
   color_categories: z.array(colorCategoryEnum).optional().default(['mixed']),
@@ -87,6 +88,9 @@ export const updateOrderStatusSchema = z.object({
   weight_kg: z.number().positive().optional().nullable(),
   cash_collected: z.boolean().optional(),
   delivery_proof_url: z.string().optional().nullable(),
+  picked_up_proof_url: z.string().optional().nullable(),
+  cancellation_reason: z.string().max(500).optional().nullable(),
+  intake_discrepancy_note: z.string().max(500).optional().nullable(),
   intake: staffIntakeSchema.optional().nullable(),
 });
 

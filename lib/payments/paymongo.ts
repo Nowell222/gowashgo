@@ -100,6 +100,62 @@ export async function createPaymentIntent(params: CreatePaymentIntentParams): Pr
 }
 
 /**
+ * Refund a PayMongo Payment.
+ * If credentials are not present, generates a simulated refund success.
+ */
+export async function refundPayment(params: {
+  paymentId: string;
+  amountInCents?: number;
+  reason?: string;
+}): Promise<{ id: string; status: string; amount?: number }> {
+  const { paymentId, amountInCents, reason = 'Order cancelled' } = params;
+
+  if (isPayMongoConfigured() && !paymentId.startsWith('pi_sim_') && !paymentId.startsWith('pay_sim_')) {
+    const secretKey = process.env.PAYMONGO_SECRET_KEY!;
+    const authHeader = `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`;
+
+    const bodyData: any = {
+      attributes: {
+        payment_id: paymentId,
+        reason: 'others',
+        notes: reason,
+      },
+    };
+    if (amountInCents) bodyData.attributes.amount = amountInCents;
+
+    const res = await fetch(`${PAYMONGO_API_BASE}/refunds`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ data: bodyData }),
+    });
+
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => ({}));
+      console.error('PayMongo Refund Error:', errorJson);
+      throw new Error(errorJson?.errors?.[0]?.detail || 'Failed to process PayMongo refund');
+    }
+
+    const json = await res.json();
+    return {
+      id: json.data?.id,
+      status: json.data?.attributes?.status || 'succeeded',
+      amount: json.data?.attributes?.amount,
+    };
+  }
+
+  // Simulated refund for sandbox/dev
+  const simulatedRefundId = `ref_sim_${crypto.randomBytes(12).toString('hex')}`;
+  return {
+    id: simulatedRefundId,
+    status: 'succeeded',
+    amount: amountInCents,
+  };
+}
+
+/**
  * Verify PayMongo webhook signature using HMAC-SHA256.
  */
 export function verifyWebhookSignature(payload: string, signatureHeader: string, signatureKey: string): boolean {
