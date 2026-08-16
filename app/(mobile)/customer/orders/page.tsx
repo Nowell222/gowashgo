@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
 import type { OrderWithItems, OrderStatus } from '@/lib/types';
 
 export default function CustomerOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
@@ -43,15 +45,15 @@ export default function CustomerOrdersPage() {
     <div className="fade-in" style={{ paddingBottom: 'var(--space-8)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
         <div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em' }}>
             My Orders
           </h1>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', marginTop: 2 }}>
+          <p style={{ color: '#64748B', fontSize: 'var(--text-xs)', marginTop: 2 }}>
             Track your laundry progress in real time.
           </p>
         </div>
         <Link href="/customer/book" className="btn btn--primary btn--sm">
-          + New
+          + Book Pickup
         </Link>
       </div>
 
@@ -59,10 +61,10 @@ export default function CustomerOrdersPage() {
       <div style={{
         display: 'flex',
         gap: 6,
-        background: 'var(--color-bg-elevated)',
+        background: '#F1F5F9',
         padding: 4,
         borderRadius: 'var(--radius-md)',
-        marginBottom: 'var(--space-5)'
+        marginBottom: 'var(--space-4)'
       }}>
         {(['all', 'active', 'completed'] as const).map((f) => (
           <button
@@ -74,10 +76,12 @@ export default function CustomerOrdersPage() {
               padding: '6px 0',
               borderRadius: 'var(--radius-sm)',
               fontSize: 'var(--text-xs)',
-              fontWeight: 600,
+              fontWeight: 700,
               textTransform: 'capitalize',
-              background: filter === f ? 'var(--color-primary)' : 'transparent',
-              color: filter === f ? 'white' : 'var(--color-text-secondary)',
+              background: filter === f ? '#0284C7' : 'transparent',
+              color: filter === f ? '#FFFFFF' : '#64748B',
+              border: 'none',
+              cursor: 'pointer',
               transition: 'all 0.2s',
             }}
           >
@@ -111,48 +115,67 @@ export default function CustomerOrdersPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {filteredOrders.map((order) => {
             const isActive = !['delivered', 'completed', 'cancelled'].includes(order.status);
+            const isCompleted = ['delivered', 'completed'].includes(order.status);
             const statusColor = getOrderStatusColor(order.status as OrderStatus);
-            const totalItems = order.order_items ? order.order_items.reduce((s, it) => s + it.quantity, 0) : 0;
 
             return (
-              <Link
+              <div
                 key={order.id}
-                href={`/customer/orders/${order.id}`}
                 className="card card--interactive"
                 style={{
-                  textDecoration: 'none',
-                  border: isActive ? '1px solid rgba(108, 92, 231, 0.3)' : '1px solid var(--color-border)',
-                  background: isActive ? 'linear-gradient(135deg, rgba(22, 33, 62, 0.9), rgba(15, 15, 26, 0.9))' : 'var(--color-bg-card)',
+                  padding: 16,
+                  border: isActive ? '1.5px solid #BAE6FD' : '1px solid #E2E8F0',
+                  background: '#FFFFFF',
+                  boxShadow: isActive ? '0 4px 15px rgba(2, 132, 199, 0.08)' : '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {isActive && <div className="pulse-dot" />}
-                      <span style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
-                        {order.order_number}
-                      </span>
+                <Link
+                  href={`/customer/orders/${order.id}`}
+                  style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {isActive && <div className="pulse-dot" />}
+                        <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', fontFamily: 'var(--font-mono)' }}>
+                          {order.order_number}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: 4 }}>
+                        {new Date(order.created_at).toLocaleDateString('en-PH', {
+                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                        })}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                      {new Date(order.created_at).toLocaleDateString('en-PH', {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                      })}
-                    </div>
+                    <span className={`status-badge status-badge--${statusColor}`}>
+                      {formatOrderStatus(order.status as OrderStatus)}
+                    </span>
                   </div>
-                  <span className={`status-badge status-badge--${statusColor}`}>
-                    {formatOrderStatus(order.status as OrderStatus)}
-                  </span>
-                </div>
 
-                <div className="divider" style={{ margin: '10px 0' }} />
+                  <div className="divider" style={{ margin: '10px 0' }} />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-xs)', color: 'var(--color-text-secondary)' }}>
-                  <span>{totalItems > 0 ? `${totalItems} items` : '1 package'}</span>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-bold)', color: 'var(--color-text)' }}>
-                    {formatPeso(order.total)}
-                  </span>
-                </div>
-              </Link>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#64748B' }}>
+                    <span>{order.weight_kg ? `⚖️ ${order.weight_kg} kg verified` : 'Standard bag'} • {order.payment_method === 'online' ? 'Online' : 'COD'}</span>
+                    <span style={{ fontSize: '15px', fontWeight: 800, color: '#0284C7' }}>
+                      {formatPeso(order.total)}
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Tier B3: Reorder / Repeat Button */}
+                {isCompleted && (
+                  <div style={{ borderTop: '1px solid #F1F5F9', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--sm"
+                      onClick={() => router.push(`/customer/book?reorder_id=${order.id}`)}
+                      style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', color: '#0284C7', border: '1px solid #BAE6FD' }}
+                    >
+                      🔄 Book Again
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
