@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { updateOrderStatusSchema } from '@/lib/validators/orders';
 import { canPerformTransition } from '@/lib/orders/status-machine';
-import { dispatchOrderStatusNotification } from '@/lib/notifications/dispatcher';
+import { dispatchOrderStatusNotification, dispatchDiscrepancyNotification } from '@/lib/notifications/dispatcher';
+import { refundPayment } from '@/lib/payments/paymongo';
 import { getWashRecommendation } from '@/lib/ai/wash-recommendation';
 import type { UserRole, OrderStatus } from '@/lib/types';
 
@@ -11,8 +12,10 @@ import type { UserRole, OrderStatus } from '@/lib/types';
  * Update an order's status.
  * Enforces:
  * 1. Role permissions and valid status state transitions.
- * 2. Counter weighing & intake calculation at 'at_facility'.
- * 3. Payment-gated completion rule on 'delivered'.
+ * 2. Proof of pickup at 'picked_up'.
+ * 3. Counter weighing, intake calculation & discrepancy logging at 'at_facility'.
+ * 4. Payment-gated completion rule on 'delivered'.
+ * 5. Cancellation refund handling when order is cancelled.
  */
 export async function PATCH(
   request: Request,
@@ -54,14 +57,25 @@ export async function PATCH(
       );
     }
 
-    const { status: targetStatus, note, weight_kg, cash_collected, delivery_proof_url, intake } = parseResult.data;
+    const {
+      status: targetStatus,
+      note,
+      weight_kg,
+      cash_collected,
+      delivery_proof_url,
+      picked_up_proof_url,
+      cancellation_reason,
+      intake_discrepancy_note,
+      intake,
+    } = parseResult.data;
 
     // Fetch existing order with branch & rider info
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
         id, order_number, status, branch_id, customer_id, rider_id, payment_method,
-        weight_kg, cash_collected, delivery_proof_url, delivery_fee, subtotal, total,
+        weight_kg, cash_collected, delivery_proof_url, picked_up_proof_url,
+        cancellation_reason, intake_discrepancy_note, delivery_fee, subtotal, total,
         branch:branches(id, name, price_per_kg),
         rider:users!orders_rider_id_fkey(full_name)
       `)
@@ -119,9 +133,35 @@ export async function PATCH(
     };
 
     // =========================================================================
+    // Rule A0: Proof-of-Pickup (on transition to 'picked_up')
+    // =========================================================================
+    if (targetStatus === 'picked_up') {
+      const effectivePickupProof = picked_up_proof_url || order.picked_up_proof_url;
+      if (picked_up_proof_url) {
+        updatePayload.picked_up_proof_url = picked_up_proof_url;
+      }
+      if (!effectivePickupProof) {
+        return NextResponse.json(
+          {
+            error: {
+              code: 'PROOF_REQUIRED',
+              message: 'A photo proof of laundry bag pickup is required before confirming pickup.',
+            },
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // =========================================================================
     // Rule A: Counter Intake & Weighing (at 'at_facility' or moving to 'washing')
     // =========================================================================
     const effectiveWeight = intake?.weight_kg || weight_kg;
+    const discrepancy = intake?.intake_discrepancy_note || intake_discrepancy_note;
+    if (discrepancy) {
+      updatePayload.intake_discrepancy_note = discrepancy;
+    }
+
     if (effectiveWeight) {
       const pricePerKg = (order.branch as any)?.price_per_kg || 3500;
       const subtotalCentavos = Math.round(effectiveWeight * pricePerKg);
@@ -222,6 +262,41 @@ export async function PATCH(
       }
     }
 
+    // =========================================================================
+    // Rule C: Cancellation + Refund Flow (on transition to 'cancelled')
+    // =========================================================================
+    if (targetStatus === 'cancelled') {
+      const effectiveReason = cancellation_reason || note || 'Order cancelled';
+      updatePayload.cancellation_reason = effectiveReason;
+
+      // Automatically refund online payment if settled
+      if (order.payment_method === 'online') {
+        const { data: paidPayments } = await serviceClient
+          .from('payments')
+          .select('id, paymongo_payment_id, amount, status')
+          .eq('order_id', id)
+          .eq('status', 'paid');
+
+        if (paidPayments && paidPayments.length > 0) {
+          for (const p of paidPayments) {
+            try {
+              await refundPayment({
+                paymentId: p.paymongo_payment_id || p.id,
+                amountInCents: p.amount,
+                reason: effectiveReason,
+              });
+              await serviceClient
+                .from('payments')
+                .update({ status: 'refunded', updated_at: new Date().toISOString() })
+                .eq('id', p.id);
+            } catch (refundErr) {
+              console.error('Auto-refund failed for payment:', p.id, refundErr);
+            }
+          }
+        }
+      }
+    }
+
     // Apply update to order
     const { data: updatedOrder, error: updateError } = await serviceClient
       .from('orders')
@@ -257,7 +332,17 @@ export async function PATCH(
       customerId: order.customer_id,
       riderName: riderName || null,
       branchName: branchName || null,
+      cancellationReason: cancellation_reason || note || null,
     }).catch((err) => console.error('Background notification dispatch failed:', err));
+
+    if (discrepancy) {
+      dispatchDiscrepancyNotification({
+        orderId: id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        discrepancyNote: discrepancy,
+      }).catch((err) => console.error('Background discrepancy notification failed:', err));
+    }
 
     return NextResponse.json({
       data: {
