@@ -1,34 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# gowashgo
 
-## Getting Started
+**WashGo** is a multi-tenant on-demand laundry delivery & facility operations platform with real-time Mapbox rider GPS tracking, digital scale weigh-after-pickup pricing, AI-assisted wash care programs, and PayMongo / GCash online settlement.
 
-First, run the development server:
+---
+
+## 🌟 Key Features
+
+- **2-Step Customer Booking**: Fast pickup booking with Mapbox reverse-geocoding, device GPS auto-detection, upfront weight-based price estimates, and zero garment-counting friction.
+- **Counter Weigh Intake & Scale Calculation**: Staff logs verified scale weight (`₱/kg`) and fabric tags at facility intake to calculate accurate billings.
+- **Real-Time Mapbox GL Live Telemetry**: Dynamic vector map tracking rider movement, branch facilities, and delivery routes with device GPS broadcasts.
+- **Payment-Gated Completion**: Single delivery handover verification enforcing paid online settlement or rider cash collection with mandatory photo proof attachments.
+- **Multi-Tenant Operations Portals**:
+  - **Platform Admin (`/admin`)**: Interactive branch pin-picker (focused on San Juan, Batangas) + instant branch manager account provisioning.
+  - **Branch Manager (`/manager`)**: Local staff and rider team management, order dispatching, custom ₱/kg pricing, and revenue analytics.
+  - **Counter Staff (`/staff`)**: Scale weighing modal, machine workflow status advancement (*Washing* $\rightarrow$ *Drying* $\rightarrow$ *Folding* $\rightarrow$ *Ready*).
+  - **Delivery Rider (`/rider`)**: Mobile cockpit with GPS telemetry broadcasting, pickup navigation, and in-app photo handover proof modal.
+  - **Customer (`/customer`)**: Live order status timeline, realtime scooter tracking, and GCash/Maya/Card online checkout.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + TypeScript
+- **Database & Auth**: Supabase (PostgreSQL with Row-Level Security)
+- **Maps & Geocoding**: Mapbox GL JS
+- **Payment Gateway**: PayMongo API (GCash, Maya, Card)
+- **Styling**: Vanilla CSS Design System with Sky Blue / Fresh Laundry aesthetic
+
+---
+
+## 🚀 Getting Started
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment variables in .env.local
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
+
+# 3. Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

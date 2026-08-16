@@ -1,0 +1,44 @@
+{
+  "name": "WashGo — Smart Laundry Pickup & Delivery",
+  "short_name": "WashGo",
+  "description": "Schedule laundry pickup and delivery, track it in real time, and pay online.",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F0F1A",
+  "theme_color": "#6C5CE7",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["lifestyle", "utilities", "shopping"],
+  "shortcuts": [
+    {
+      "name": "Book Pickup",
+      "url": "/customer/book",
+      "description": "Schedule a new laundry pickup"
+    },
+    {
+      "name": "My Orders",
+      "url": "/customer/orders",
+      "description": "Track active laundry orders"
+    }
+  ]
+}
