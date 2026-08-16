@@ -85,6 +85,9 @@ export interface Order {
   weight_kg: number | null;
   cash_collected: boolean;
   delivery_proof_url: string | null;
+  picked_up_proof_url: string | null;
+  cancellation_reason: string | null;
+  intake_discrepancy_note: string | null;
   pickup_address: string;
   pickup_latitude: number;
   pickup_longitude: number;
@@ -99,6 +102,41 @@ export interface Order {
   total: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface OrderRating {
+  id: string;
+  order_id: string;
+  customer_id: string;
+  branch_id: string;
+  stars: number;
+  note: string | null;
+  created_at: string;
+}
+
+export interface CustomerAddress {
+  id: string;
+  customer_id: string;
+  label: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RiderCashSettlement {
+  id: string;
+  rider_id: string;
+  branch_id: string;
+  manager_id: string | null;
+  amount: number;
+  shift_date: string;
+  orders_count: number;
+  is_settled: boolean;
+  settled_at: string | null;
+  created_at: string;
 }
 
 export interface OrderItem {
@@ -221,6 +259,7 @@ export interface OrderWithItems extends Order {
 export interface OrderWithDetails extends Order {
   order_items: OrderItem[];
   payments?: Payment[];
+  ratings?: OrderRating[];
   customer: Pick<User, 'id' | 'full_name' | 'email' | 'phone' | 'avatar_url'>;
   rider: Pick<User, 'id' | 'full_name' | 'phone' | 'avatar_url'> | null;
   branch: Pick<Branch, 'id' | 'name' | 'address' | 'latitude' | 'longitude'>;
