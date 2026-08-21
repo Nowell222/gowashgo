@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { OrderStatus } from '@/lib/types';
@@ -36,16 +36,18 @@ export default function LiveTrackingMap({
 }: LiveTrackingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const isMapLoadedRef = useRef(false);
+  const hasFittedBoundsRef = useRef(false);
+
   const riderMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const branchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const targetMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const simulationProgressRef = useRef(0.15);
 
   const [mapboxAvailable, setMapboxAvailable] = useState<boolean>(true);
   const [routeDistanceKm, setRouteDistanceKm] = useState<number | null>(null);
   const [routeDurationMin, setRouteDurationMin] = useState<number | null>(null);
 
-  // Is a rider actually assigned and moving?
-  const hasRider = Boolean(riderName || riderLocation);
   const isEnRoute = ['pickup_en_route', 'delivery_en_route'].includes(orderStatus);
   const showRiderMarker = ['rider_assigned', 'pickup_en_route', 'delivery_en_route'].includes(orderStatus);
 
@@ -65,10 +67,10 @@ export default function LiveTrackingMap({
     } else if (!showRiderMarker) {
       setCurrentRiderPos(null);
     }
-  }, [riderLocation, showRiderMarker]);
+  }, [riderLocation?.lat, riderLocation?.lng, showRiderMarker]);
 
   // Fetch real road navigation coordinates from Mapbox Directions API
-  async function fetchStreetRoute(origin: Point, destination: Point): Promise<[number, number][]> {
+  const fetchStreetRoute = useCallback(async (origin: Point, destination: Point): Promise<[number, number][]> => {
     try {
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson&overview=full&access_token=${token}`;
       const res = await fetch(url);
@@ -84,41 +86,42 @@ export default function LiveTrackingMap({
       console.warn('Failed to fetch road directions from Mapbox:', err);
     }
 
-    // Fallback straight line if directions query fails
+    // Fallback straight line
     return [
       [origin.lng, origin.lat],
       [destination.lng, destination.lat],
     ];
-  }
+  }, [token]);
 
-  // Simulation mode (moves rider along realistic path)
+  // Smooth Simulation mode (persists progress across re-renders)
   useEffect(() => {
     if (!isEnRoute || !isSimulating || riderLocation) return;
 
-    let progress = 0.15;
     const interval = setInterval(() => {
-      progress = (progress + 0.02) % 1;
-      const lat = branchLocation.lat + (targetLocation.lat - branchLocation.lat) * progress + Math.sin(progress * Math.PI) * 0.001;
-      const lng = branchLocation.lng + (targetLocation.lng - branchLocation.lng) * progress + Math.cos(progress * Math.PI) * 0.0008;
+      simulationProgressRef.current = (simulationProgressRef.current + 0.008) % 1;
+      const progress = simulationProgressRef.current;
+      const lat = branchLocation.lat + (targetLocation.lat - branchLocation.lat) * progress + Math.sin(progress * Math.PI) * 0.0008;
+      const lng = branchLocation.lng + (targetLocation.lng - branchLocation.lng) * progress + Math.cos(progress * Math.PI) * 0.0006;
       setCurrentRiderPos({ lat, lng });
-    }, 2000);
+    }, 1500);
 
     return () => clearInterval(interval);
-  }, [isEnRoute, isSimulating, branchLocation, targetLocation, riderLocation]);
+  }, [isEnRoute, isSimulating, branchLocation.lat, branchLocation.lng, targetLocation.lat, targetLocation.lng, !!riderLocation]);
 
-  // Update Rider Marker position dynamically
+  // Update Rider Marker position dynamically with smooth interpolation
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMapLoadedRef.current) return;
 
     if (currentRiderPos && showRiderMarker) {
       if (!riderMarkerRef.current) {
         const riderEl = document.createElement('div');
         riderEl.className = 'mapbox-custom-pin rider-pin';
+        riderEl.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)';
         riderEl.innerHTML = `
-          <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6); animation: bounce 1.5s infinite;">
+          <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6);">
             🏍️
           </div>
-          <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+          <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); text-align: center;">
             ${riderName || 'Rider'}
           </div>
         `;
@@ -132,9 +135,53 @@ export default function LiveTrackingMap({
       riderMarkerRef.current.remove();
       riderMarkerRef.current = null;
     }
-  }, [currentRiderPos, showRiderMarker, riderName]);
+  }, [currentRiderPos?.lat, currentRiderPos?.lng, showRiderMarker, riderName]);
 
-  // Initialize Mapbox GL Map & Road Route
+  // Update Branch and Target markers when coords change without re-creating map
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoadedRef.current) return;
+
+    if (branchMarkerRef.current) {
+      branchMarkerRef.current.setLngLat([branchLocation.lng, branchLocation.lat]);
+    }
+    if (targetMarkerRef.current) {
+      targetMarkerRef.current.setLngLat([targetLocation.lng, targetLocation.lat]);
+    }
+  }, [branchLocation.lat, branchLocation.lng, targetLocation.lat, targetLocation.lng]);
+
+  // Update street route without rebuilding the map
+  const updateRouteLine = useCallback(async () => {
+    if (!mapRef.current || !isMapLoadedRef.current) return;
+    const startPoint = (showRiderMarker && currentRiderPos) ? currentRiderPos : branchLocation;
+    const streetCoordinates = await fetchStreetRoute(startPoint, targetLocation);
+
+    const source = mapRef.current.getSource('street-route') as mapboxgl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: streetCoordinates,
+        },
+      });
+    }
+
+    // Only fit bounds on first successful load so it doesn't snap the user's camera
+    if (!hasFittedBoundsRef.current && mapRef.current) {
+      const bounds = new mapboxgl.LngLatBounds();
+      streetCoordinates.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+      bounds.extend([branchLocation.lng, branchLocation.lat]);
+      bounds.extend([targetLocation.lng, targetLocation.lat]);
+      if (showRiderMarker && currentRiderPos) {
+        bounds.extend([currentRiderPos.lng, currentRiderPos.lat]);
+      }
+      mapRef.current.fitBounds(bounds, { padding: { top: 70, bottom: 40, left: 40, right: 40 }, maxZoom: 15, duration: 1000 });
+      hasFittedBoundsRef.current = true;
+    }
+  }, [branchLocation, targetLocation, showRiderMarker, currentRiderPos, fetchStreetRoute]);
+
+  // Initialize Mapbox GL Map ONCE
   useEffect(() => {
     if (!mapContainerRef.current || !token) {
       setMapboxAvailable(false);
@@ -159,6 +206,7 @@ export default function LiveTrackingMap({
 
       map.on('load', async () => {
         mapRef.current = map;
+        isMapLoadedRef.current = true;
 
         // 1. Branch Marker
         const branchEl = document.createElement('div');
@@ -167,7 +215,7 @@ export default function LiveTrackingMap({
           <div style="background: #0284C7; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);">
             🏪
           </div>
-          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
             ${branchLocation.label || 'Branch'}
           </div>
         `;
@@ -182,7 +230,7 @@ export default function LiveTrackingMap({
           <div style="background: #10B981; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
             📍
           </div>
-          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
             ${targetLabel}
           </div>
         `;
@@ -194,11 +242,12 @@ export default function LiveTrackingMap({
         if (showRiderMarker && currentRiderPos) {
           const riderEl = document.createElement('div');
           riderEl.className = 'mapbox-custom-pin rider-pin';
+          riderEl.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)';
           riderEl.innerHTML = `
-            <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6); animation: bounce 1.5s infinite;">
+            <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6);">
               🏍️
             </div>
-            <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); text-align: center;">
               ${riderName || 'Rider'}
             </div>
           `;
@@ -207,11 +256,10 @@ export default function LiveTrackingMap({
             .addTo(map);
         }
 
-        // 4. Fetch Real Street Route from Mapbox Directions API
+        // 4. Fetch Real Street Route
         const startPoint = (showRiderMarker && currentRiderPos) ? currentRiderPos : branchLocation;
         const streetCoordinates = await fetchStreetRoute(startPoint, targetLocation);
 
-        // Add Route GeoJSON Source
         map.addSource('street-route', {
           type: 'geojson',
           data: {
@@ -224,7 +272,6 @@ export default function LiveTrackingMap({
           },
         });
 
-        // Background Route Line (Soft Glowing Blue)
         map.addLayer({
           id: 'street-route-bg',
           type: 'line',
@@ -237,7 +284,6 @@ export default function LiveTrackingMap({
           },
         });
 
-        // Foreground Active Driving Line (Crisp Blue)
         map.addLayer({
           id: 'street-route-line',
           type: 'line',
@@ -250,18 +296,23 @@ export default function LiveTrackingMap({
           },
         });
 
-        // Fit bounds to fit the whole road network
-        const bounds = new mapboxgl.LngLatBounds();
-        streetCoordinates.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-        bounds.extend([branchLocation.lng, branchLocation.lat]);
-        bounds.extend([targetLocation.lng, targetLocation.lat]);
-        if (showRiderMarker && currentRiderPos) {
-          bounds.extend([currentRiderPos.lng, currentRiderPos.lat]);
+        // Initial smooth fitBounds
+        if (!hasFittedBoundsRef.current) {
+          const bounds = new mapboxgl.LngLatBounds();
+          streetCoordinates.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+          bounds.extend([branchLocation.lng, branchLocation.lat]);
+          bounds.extend([targetLocation.lng, targetLocation.lat]);
+          if (showRiderMarker && currentRiderPos) {
+            bounds.extend([currentRiderPos.lng, currentRiderPos.lat]);
+          }
+          map.fitBounds(bounds, { padding: { top: 70, bottom: 40, left: 40, right: 40 }, maxZoom: 15, duration: 1000 });
+          hasFittedBoundsRef.current = true;
         }
-        map.fitBounds(bounds, { padding: { top: 70, bottom: 40, left: 40, right: 40 }, maxZoom: 15 });
       });
 
       return () => {
+        isMapLoadedRef.current = false;
+        hasFittedBoundsRef.current = false;
         map.remove();
         mapRef.current = null;
       };
@@ -269,7 +320,18 @@ export default function LiveTrackingMap({
       console.warn('Mapbox GL initialization fallback:', err);
       setMapboxAvailable(false);
     }
-  }, [branchLocation, targetLocation, token]);
+  }, [token]);
+
+  // Recenter map helper button
+  const handleRecenter = () => {
+    if (!mapRef.current) return;
+    const target = currentRiderPos || targetLocation;
+    mapRef.current.easeTo({
+      center: [target.lng, target.lat],
+      zoom: 14.5,
+      duration: 800,
+    });
+  };
 
   const effectiveEta = routeDurationMin || etaMinutes;
 
@@ -328,6 +390,34 @@ export default function LiveTrackingMap({
           </div>
         </div>
       </div>
+
+      {/* Recenter Button */}
+      {mapboxAvailable && (
+        <button
+          type="button"
+          onClick={handleRecenter}
+          style={{
+            position: 'absolute',
+            bottom: 14,
+            left: 14,
+            zIndex: 10,
+            background: '#FFFFFF',
+            border: '1px solid #CBD5E1',
+            borderRadius: 'var(--radius-full)',
+            padding: '6px 12px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#0284C7',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          🎯 Recenter
+        </button>
+      )}
 
       {/* Mapbox Canvas */}
       {mapboxAvailable ? (
