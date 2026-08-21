@@ -1,246 +1,286 @@
-# 🧺 WashGo — Complete System Documentation & User Manual
+# 🧺 WashGo — Complete System Functions & Operational Flow Manual
 
 > **WashGo** is an enterprise multi-tenant, on-demand laundry operations and delivery platform built with **Next.js 16 (App Router)**, **Supabase (PostgreSQL + RLS + Realtime)**, **Mapbox GL JS**, and **PayMongo**.
 
 ---
 
 ## 📑 Table of Contents
-1. [🔐 System Login Credentials](#-system-login-credentials)
-2. [🏗️ System Architecture & Portals](#️-system-architecture--portals)
-3. [👑 Superadmin Portal (`/admin`)](#-superadmin-portal-admin)
-4. [🏢 Branch Manager Portal (`/manager`)](#-branch-manager-portal-manager)
-5. [🧺 Facility Staff Workstation (`/staff`)](#-facility-staff-workstation-staff)
-6. [🛵 Delivery Rider Mobile Cockpit (`/rider`)](#-delivery-rider-mobile-cockpit-rider)
-7. [👤 Customer Mobile Web App (`/customer`)](#-customer-mobile-web-app-customer)
-8. [🔄 End-to-End Order Status Machine](#-end-to-end-order-status-machine)
-9. [💳 Payment Methods & Settlement](#-payment-methods--settlement)
-10. [⚙️ Environment Variables & Setup](#️-environment-variables--setup)
-11. [🚀 Deployment Guide](#-deployment-guide)
+1. [🔐 Quick Login Credentials](#-quick-login-credentials)
+2. [🔄 End-to-End System Operational Flow](#-end-to-end-system-operational-flow)
+   - [Phase 1: Platform Setup & Branch Provisioning (Superadmin)](#phase-1-platform-setup--branch-provisioning-superadmin)
+   - [Phase 2: Team Onboarding & Custom Pricing (Branch Manager)](#phase-2-team-onboarding--custom-pricing-branch-manager)
+   - [Phase 3: Order Placement & Dispatch (Customer & Manager)](#phase-3-order-placement--dispatch-customer--manager)
+   - [Phase 4: Pickup Navigation & Bag Verification (Rider & Customer)](#phase-4-pickup-navigation--bag-verification-rider--customer)
+   - [Phase 5: Counter Weigh Intake & AI Wash Care (Facility Staff)](#phase-5-counter-weigh-intake--ai-wash-care-facility-staff)
+   - [Phase 6: Machine Workflow & Packing (Facility Staff)](#phase-6-machine-workflow--packing-facility-staff)
+   - [Phase 7: Delivery Navigation & Live Map Telemetry (Rider & Customer)](#phase-7-delivery-navigation--live-map-telemetry-rider--customer)
+   - [Phase 8: Payment Handover, Photo Proof & Rating (Rider & Customer)](#phase-8-payment-handover-photo-proof--rating-rider--customer)
+3. [⚙️ Detailed Functions Catalog by Role](#️-detailed-functions-catalog-by-role)
+   - [👑 1. Superadmin Functions (`/admin`)](#1-superadmin-functions-admin)
+   - [🏢 2. Branch Manager Functions (`/manager`)](#2-branch-manager-functions-manager)
+   - [🧺 3. Facility Staff Functions (`/staff`)](#3-facility-staff-functions-staff)
+   - [🛵 4. Delivery Rider Functions (`/rider`)](#4-delivery-rider-functions-rider)
+   - [👤 5. Customer Functions (`/customer`)](#5-customer-functions-customer)
+   - [🤖 6. Automated Backend & AI Functions](#6-automated-backend--ai-functions)
+4. [📊 Order Status State Machine & Permissions](#-order-status-state-machine--permissions)
+5. [🚀 Setup & Deployment](#-setup--deployment)
 
 ---
 
-## 🔐 System Login Credentials
+## 🔐 Quick Login Credentials
 
-The system comes pre-seeded with 5 distinct role accounts for testing and evaluation.
+> **Login URL:** `https://gowashgo.vercel.app/login` (or `/login` locally)  
+> **Universal Password for all seeded accounts:** `password123`
 
-> **Universal Password for all test accounts:** `password123`  
-> **Central Login Page:** `https://gowashgo.vercel.app/login` (or `/login` on localhost)
-
-| Role | Email | Password | Landing Page | Primary Responsibilities |
+| Role | Email | Password | Portal URL | Layout Type |
 | :--- | :--- | :--- | :--- | :--- |
-| **👑 Superadmin** | `admin@washgo.ph` | `password123` | `/admin` | System-wide oversight, interactive branch pin-picker & manager provisioning |
-| **🏢 Branch Manager** | `manager@washgo.ph` | `password123` | `/manager` | Team management, staff/rider invite generation, pricing & revenue analytics |
-| **🧺 Facility Staff** | `staff@washgo.ph` | `password123` | `/staff` | Counter weigh scale intake, AI wash care recommendation & machine stage progression |
-| **🛵 Delivery Rider** | `rider@washgo.ph` | `password123` | `/rider` | Mobile cockpit, live Mapbox GPS telemetry, bag photo proof & delivery handover |
-| **👤 Customer** | `customer@washgo.ph` | `password123` | `/customer` | 2-step booking, on-screen QR pickup pass, live scooter tracking & GCash payment |
-
-To re-seed or verify these test accounts in the PostgreSQL database:
-```bash
-node scripts/seed-auth-users.mjs
-```
+| **👑 Superadmin** | `admin@washgo.ph` | `password123` | `/admin` | Desktop Portal |
+| **🏢 Branch Manager** | `manager@washgo.ph` | `password123` | `/manager` | Desktop Portal |
+| **🧺 Facility Staff** | `staff@washgo.ph` | `password123` | `/staff` | Desktop/Tablet Workstation |
+| **🛵 Delivery Rider** | `rider@washgo.ph` | `password123` | `/rider` | Mobile Web App (PWA) |
+| **👤 Customer** | `customer@washgo.ph` | `password123` | `/customer` | Mobile Web App (PWA) |
 
 ---
 
-## 🏗️ System Architecture & Portals
+## 🔄 End-to-End System Operational Flow
 
-```
-                         ┌─────────────────────────────┐
-                         │   Next.js 16 Full-Stack     │
-                         │   (Vercel Single Deploy)    │
-                         └──────────────┬──────────────┘
-                                        │
-        ┌───────────────────────────────┼──────────────────────────────┐
-        │                               │                              │
-┌───────▼────────┐             ┌────────▼────────┐            ┌────────▼────────┐
-│ Desktop Portal │             │   Mobile PWA    │            │ Serverless APIs │
-│ /admin         │             │ /customer       │            │ app/api/**      │
-│ /manager       │             │ /rider          │            │ (17 Endpoints)  │
-│ /staff         │             │                 │            │                 │
-└───────┬────────┘             └────────┬────────┘            └────────┬────────┘
-        │                               │                              │
-        └───────────────────────────────┼──────────────────────────────┘
-                                        │
-                ┌───────────────────────┼───────────────────────┐
-                │                       │                       │
-        ┌───────▼───────┐       ┌───────▼───────┐       ┌───────▼───────┐
-        │ Supabase Auth │       │ Mapbox GL JS  │       │  PayMongo API │
-        │ PostgreSQL+RLS│       │ Live Routing  │       │ GCash / Maya  │
-        └───────────────┘       └───────────────┘       └───────────────┘
-```
-
----
-
-## 👑 Superadmin Portal (`/admin`)
-
-The Superadmin (Platform Admin) has system-wide visibility across all branch operations, revenue streams, and tenant accounts.
-
-### Key Capabilities:
-1. **Interactive Branch Pin-Picker (`/admin/branches/new`):**
-   * Pan and drop a pin on the Mapbox interactive map (centered around San Juan, Batangas and beyond).
-   * Reverse-geocodes street address automatically.
-   * Sets default `₱/kg` rate and processing turnaround time.
-2. **Instant Branch Manager Provisioning:**
-   * One-click creation of the initial Branch Manager account directly inside the branch creation form.
-3. **Multi-Branch Overview (`/admin/branches`):**
-   * Real-time metrics per branch: active loads, daily revenue, active riders, machine utilization.
-4. **Global User Management (`/admin/users`):**
-   * View, filter, activate, or deactivate accounts across all roles.
-
----
-
-## 🏢 Branch Manager Portal (`/manager`)
-
-The Branch Manager is the operational lead of a specific branch facility.
-
-### Key Capabilities:
-1. **Team Onboarding & Invites (`/manager/invites`):**
-   * Generates secure, single-use or reusable invite links for **Staff** and **Riders**.
-   * Link format: `https://gowashgo.vercel.app/invite/[code]`.
-   * Onboarding staff/riders simply click the link, enter their name/password, and are instantly registered and linked to the manager's branch.
-2. **Live Order Dispatching (`/manager/orders`):**
-   * Assign incoming customer orders to available branch riders.
-3. **Custom Pricing Configuration (`/manager/pricing`):**
-   * Customize base price per kilogram (`₱/kg`) and special garment rates (delicates, bedsheets, heavy jackets).
-4. **Cash Settlement & Revenue Checklist:**
-   * Audit rider COD collections and reconcile daily cash drawers.
-   * Export branch order and revenue summaries to CSV.
-
----
-
-## 🧺 Facility Staff Workstation (`/staff`)
-
-Designed for branch counter tablets and desktop workstations.
-
-### Key Capabilities:
-1. **Digital Scale Intake Modal:**
-   * Upon rider bag dropoff, staff inputs the exact weighed scale weight in kilograms (e.g., `4.2 kg`).
-   * Automatically calculates total customer bill based on branch rate tables.
-2. **AI-Assisted Wash Care Recommendation:**
-   * Analyzes fabric load types and recommends:
-     - Optimal water temperature (Cold / Warm / Hot)
-     - Spin cycle & agitation level
-     - Detergent & softener dosage
-3. **One-Click Machine Progression:**
-   * Staff advances order stages with a single click:
-     $$\text{At Facility} \longrightarrow \text{Washing} \longrightarrow \text{Drying} \longrightarrow \text{Folding} \longrightarrow \text{Ready for Delivery}$$
-
----
-
-## 🛵 Delivery Rider Mobile Cockpit (`/rider`)
-
-Optimized for smartphones and mounted motorcycle navigation brackets.
-
-### Key Capabilities:
-1. **Live GPS Telemetry Broadcasting:**
-   * High-accuracy device GPS tracking emits real-time coordinate pings every 6 seconds.
-   * Built-in Screen Wake Lock prevents phone display from turning off while driving.
-   * Offline ping queue saves coordinates during cellular dead-zones and flushes upon reconnection.
-2. **Interactive Mapbox Street Navigation:**
-   * Live road navigation route lines dynamically drawn from rider to customer location.
-   * Dynamic ETA and remaining distance calculation.
-3. **Mandatory Bag Pickup Photo (`picked_up`):**
-   * In-app camera captures the customer's laundry bag tag at pickup.
-4. **Payment Verification & Proof of Delivery Handover (`delivered`):**
-   * Shows whether the order is already paid online (GCash/Card) or requires COD cash collection.
-   * Captures handover delivery photo proof before completing the job.
-
----
-
-## 👤 Customer Mobile Web App (`/customer`)
-
-Fast, friction-free mobile web experience with zero garment-counting hassle.
-
-### Key Capabilities:
-1. **2-Step Booking (`/customer/book`):**
-   * Device GPS auto-detects pickup address or allows pin adjustment on Mapbox.
-   * Choose laundry service category and preferred pickup window.
-2. **On-Screen QR Pickup Pass:**
-   * Dynamic QR pass displayed on customer's phone for rider verification during bag collection.
-3. **Real-Time Live Rider Telemetry:**
-   * Live vector map displaying the courier scooter icon smoothly gliding on the street map in real time.
-4. **Online Settlement via PayMongo:**
-   * Pay instantly via GCash, Maya, GrabPay, or Credit/Debit Card.
-5. **Rating & Feedback (`/customer/orders/[id]`):**
-   * Submit 1–5 star rating and review for rider and branch quality.
-
----
-
-## 🔄 End-to-End Order Status Machine
+The diagram below outlines the entire lifecycle of an order from platform configuration to final customer delivery:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> pending: Customer Books Pickup
-    pending --> confirmed: Manager / Staff Confirms
-    confirmed --> rider_assigned: Rider Assigned
-    rider_assigned --> pickup_en_route: Rider Accepts Trip
-    pickup_en_route --> picked_up: Bag Photo Captured
-    picked_up --> at_facility: Arrived at Branch
-    at_facility --> washing: Scale Weighed (₱/kg calculated)
-    washing --> drying: Wash Cycle Complete
-    drying --> folding: Drying Complete
-    folding --> ready_for_delivery: Packed & Tagged
-    ready_for_delivery --> delivery_en_route: Rider Starts Delivery
-    delivery_en_route --> delivered: Handover Photo & Payment
-    delivered --> completed: Customer Rating & Archived
-    completed --> [*]
-```
+flowchart TD
+    subgraph S1["1. Admin & Manager Setup"]
+        A1[Admin creates Branch & Manager] --> A2[Manager generates Staff/Rider Invite Links]
+        A2 --> A3[Staff and Riders register via Invite Links]
+    end
 
-### Transition Permissions Matrix:
-| Transition | Allowed Roles | Required Action / Payload |
-| :--- | :--- | :--- |
-| `pending` &rarr; `confirmed` | `branch_manager`, `staff` | Order review |
-| `confirmed` &rarr; `rider_assigned` | `branch_manager`, `staff` | Select rider ID |
-| `rider_assigned` &rarr; `pickup_en_route` | `rider` | Tap "Accept & Start Pickup" |
-| `pickup_en_route` &rarr; `picked_up` | `rider` | **Mandatory Bag Photo Proof** |
-| `picked_up` &rarr; `at_facility` | `rider`, `staff` | Facility dropoff |
-| `at_facility` &rarr; `washing` | `staff`, `branch_manager` | **Input Scale Weight (kg)** |
-| `washing` &rarr; `drying` | `staff`, `branch_manager` | Advance cycle |
-| `drying` &rarr; `folding` | `staff`, `branch_manager` | Advance cycle |
-| `folding` &rarr; `ready_for_delivery` | `staff`, `branch_manager` | Bag tagging |
-| `ready_for_delivery` &rarr; `delivery_en_route` | `rider` | Tap "Start Delivery" |
-| `delivery_en_route` &rarr; `delivered` | `rider` | **Handover Photo + COD Check** |
-| `delivered` &rarr; `completed` | `customer`, `staff`, `admin` | Rating submitted |
+    subgraph S2["2. Customer Booking"]
+        B1[Customer sets GPS location & selects service] --> B2[Booking placed in Pending state]
+    end
 
----
+    subgraph S3["3. Dispatch & Pickup"]
+        C1[Manager assigns Rider] --> C2[Rider accepts & starts pickup trip]
+        C2 --> C3[Rider arrives & snaps Bag Photo Proof]
+        C3 --> C4[Rider transports bag to Facility]
+    end
 
-## 💳 Payment Methods & Settlement
+    subgraph S4["4. Facility Processing"]
+        D1[Staff weighs bag on Digital Scale: kg entered] --> D2[System calculates total bill based on rate table]
+        D2 --> D3[AI recommends wash temp, cycle & detergent]
+        D3 --> D4[Staff advances: Washing → Drying → Folding → Ready]
+    end
 
-* **Cash on Delivery (COD):** Rider collects exact cash upon delivery; checkbox confirmation required in rider handover modal.
-* **GCash / Maya / Card:** Integrated via PayMongo API with automated webhook callbacks (`/api/webhooks/paymongo`) marking payment rows as `paid`.
+    subgraph S5["5. Delivery & Completion"]
+        E1[Rider starts delivery trip: Live GPS broadcasted] --> E2[Customer watches scooter move live on Mapbox]
+        E2 --> E3[Rider collects Cash / verifies Online Payment]
+        E3 --> E4[Rider snaps Handover Photo Proof → Order Completed]
+        E4 --> E5[Customer rates service 1-5 stars]
+    end
 
----
-
-## ⚙️ Environment Variables & Setup
-
-Create a `.env.local` file in your root project directory:
-
-```env
-# Supabase Database & Auth
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
-
-# Mapbox GL JS Vector Maps & Geocoding
-NEXT_PUBLIC_MAPBOX_TOKEN=pk.eyJ1IjoieW91ci11c2VyIi...
-
-# PayMongo Online Payments (Phase 4)
-PAYMONGO_SECRET_KEY=sk_test_...
-PAYMONGO_PUBLIC_KEY=pk_test_...
-PAYMONGO_WEBHOOK_SECRET=whsec_...
-
-# App Config
-NEXT_PUBLIC_APP_URL=https://gowashgo.vercel.app
-NEXT_PUBLIC_APP_NAME=WashGo
-VAPID_SUBJECT=mailto:admin@washgo.app
+    S1 --> S2 --> S3 --> S4 --> S5
 ```
 
 ---
 
-## 🚀 Deployment Guide
+### Phase 1: Platform Setup & Branch Provisioning (Superadmin)
+1. **Superadmin Logs In:** Navigates to `/admin`.
+2. **Creates Branch:**
+   * Opens `/admin/branches/new`.
+   * Interactively selects branch location on Mapbox map (coordinates & address auto-filled).
+   * Sets default `₱/kg` rate, contact details, and base turnaround time.
+   * Checks **"Create Initial Branch Manager Account"** and inputs manager email (e.g. `manager.sanjuan@washgo.ph`).
+3. **Outcome:** The branch record is created in PostgreSQL and the manager account is immediately provisioned in Supabase Auth.
 
-### Deploying to Vercel (1-Click Zero Config):
-1. Push your repository to GitHub: `git push origin main`.
-2. Go to **[vercel.com/new](https://vercel.com/new)** and import `Nowell222/gowashgo`.
-3. Paste your `.env.local` variables into Vercel's **Environment Variables** panel.
-4. Click **Deploy**. Both the Next.js frontend and all 17 `/api/**` routes deploy automatically to your live `.vercel.app` URL.
+---
+
+### Phase 2: Team Onboarding & Custom Pricing (Branch Manager)
+1. **Branch Manager Logs In:** Navigates to `/manager`.
+2. **Generates Team Invites:**
+   * Goes to `/manager/invites`.
+   * Selects role (`staff` or `rider`) and clicks **Generate Invite Link**.
+   * Sends the unique URL (e.g. `https://gowashgo.vercel.app/invite/ABC123XYZ`) to employees.
+3. **Staff/Rider Onboarding:**
+   * Employee opens link, inputs full name, phone number, and password.
+   * Account is created with the exact assigned role and tied to the manager's `branch_id`.
+4. **Sets Branch Pricing (`/manager/pricing`):**
+   * Configures base laundry rate per kg (e.g. `₱35.00/kg`) plus specific rates for heavy jackets, bedsheets, or delicates.
+
+---
+
+### Phase 3: Order Placement & Dispatch (Customer & Manager)
+1. **Customer Places Booking (`/customer/book`):**
+   * Uses device GPS auto-detection or map pin to set pickup address.
+   * Selects service category (Regular Wash & Fold, Beddings, Premium Care).
+   * Chooses pickup time slot and payment preference (Cash or Online GCash/Maya).
+   * Submits booking &rarr; Order status: `pending`.
+2. **Order Assignment:**
+   * Branch Manager opens `/manager/orders` and confirms order &rarr; status: `confirmed`.
+   * Assigns an available branch rider &rarr; status: `rider_assigned`.
+
+---
+
+### Phase 4: Pickup Navigation & Bag Verification (Rider & Customer)
+1. **Rider Accepts Job (`/rider`):**
+   * Rider receives dispatch notification on mobile cockpit.
+   * Taps **Accept & Start Pickup** &rarr; status: `pickup_en_route`.
+2. **Road Navigation:**
+   * Mapbox draws live driving route with distance (km) and estimated arrival time (~mins).
+3. **Customer Verification:**
+   * Customer shows on-screen **QR Pickup Pass** or handwritten bag label to rider.
+4. **Mandatory Bag Photo:**
+   * Rider opens **Confirm Pickup Modal**, takes/uploads a photo of the laundry bag, and confirms.
+   * Status updates to `picked_up` with bag photo uploaded to cloud storage.
+5. **Facility Dropoff:**
+   * Rider brings laundry to branch & taps **Arrived at Branch** &rarr; status: `at_facility`.
+
+---
+
+### Phase 5: Counter Weigh Intake & AI Wash Care (Facility Staff)
+1. **Staff Weighed Intake (`/staff`):**
+   * Staff opens the order in the **Counter Intake Modal**.
+   * Enters verified scale weight in kilograms (e.g. `4.5 kg`).
+   * System recalculates final order bill: $\text{Weight (kg)} \times \text{Branch Rate (₱/kg)}$.
+2. **AI Wash Recommendation:**
+   * AI inspects load type and tags to recommend:
+     - **Water Temperature:** Cold ($30^\circ\text{C}$), Warm ($40^\circ\text{C}$), or Hot ($60^\circ\text{C}$).
+     - **Cycle:** Delicate / Normal / Heavy Soil.
+     - **Detergent & Softener Dosage:** Precise ml calculations per kg load.
+3. **Notification Sent:**
+   * Customer receives an instant notification with verified weight and exact amount due.
+
+---
+
+### Phase 6: Machine Workflow & Packing (Facility Staff)
+Staff advances the order across production stages with 1 click per milestone:
+1. **Start Wash** &rarr; status: `washing`
+2. **Move to Dryer** &rarr; status: `drying`
+3. **Folding & QA** &rarr; status: `folding`
+4. **Pack & Tag** &rarr; status: `ready_for_delivery`
+
+---
+
+### Phase 7: Delivery Navigation & Live Map Telemetry (Rider & Customer)
+1. **Rider Starts Delivery:**
+   * Rider taps **Start Delivery** on `/rider` &rarr; status: `delivery_en_route`.
+2. **Live Telemetry Emission:**
+   * Rider app emits GPS telemetry every 6 seconds to Supabase Realtime channel.
+   * Built-in Screen Wake Lock keeps screen awake during transit.
+3. **Customer Real-Time View (`/customer/orders/[id]`):**
+   * Customer watches the scooter icon smoothly glide across the Mapbox road network with live ETA.
+
+---
+
+### Phase 8: Payment Handover, Photo Proof & Rating (Rider & Customer)
+1. **Payment Verification:**
+   * **Online (GCash / Maya / Card):** Handover modal verifies verified status via PayMongo.
+   * **Cash on Delivery (COD):** Rider collects cash and checks the mandatory confirmation checkbox.
+2. **Mandatory Handover Photo:**
+   * Rider captures delivery photo proof showing laundry delivered to recipient.
+3. **Completion:**
+   * Rider taps **Confirm & Complete** &rarr; status: `completed`.
+4. **Customer Rating:**
+   * Customer rates rider and branch service (1–5 stars) with optional review note.
+
+---
+
+## ⚙️ Detailed Functions Catalog by Role
+
+### 👑 1. Superadmin Functions (`/admin`)
+* `fn_create_branch`: Interactive Mapbox pin-picker to provision branches with geocoded coordinates.
+* `fn_provision_manager`: Automates creation of initial Branch Manager auth user tied to new branch.
+* `fn_system_overview`: Real-time systemwide metrics (active orders, total revenue, branch utilization).
+* `fn_manage_users`: Search, filter, activate, and deactivate platform accounts.
+* `fn_branch_analytics`: Inspect revenue, active workforce, and order throughput per branch.
+
+---
+
+### 🏢 2. Branch Manager Functions (`/manager`)
+* `fn_generate_invites`: Create secure invite codes/links for onboarding Staff and Riders.
+* `fn_dispatch_order`: Assign queued customer bookings to specific branch riders.
+* `fn_configure_pricing`: Set custom base rate per kg (`₱/kg`) and item category rates.
+* `fn_cash_settlement`: Audit rider cash collections and reconcile daily cash drawers.
+* `fn_export_csv`: Export detailed branch revenue and order logs to CSV files.
+* `fn_manage_fleet`: Monitor rider online status, active tasks, and performance ratings.
+
+---
+
+### 🧺 3. Facility Staff Functions (`/staff`)
+* `fn_scale_intake`: Enter verified digital scale weight (kg) to compute accurate customer billings.
+* `fn_ai_wash_care`: Generate temperature, cycle, and detergent recommendations based on fabric tags.
+* `fn_advance_machine_stage`: Step-by-step state progression (`washing` &rarr; `drying` &rarr; `folding` &rarr; `ready_for_delivery`).
+* `fn_intake_discrepancy`: Flag and log notes if laundry contents differ from customer booking notes.
+
+---
+
+### 🛵 4. Delivery Rider Functions (`/rider`)
+* `fn_gps_telemetry_emit`: Broadcast high-accuracy coordinates to Supabase Realtime every 6 seconds.
+* `fn_screen_wake_lock`: Prevent device screen from sleeping while actively navigating.
+* `fn_offline_gps_queue`: Store GPS coordinates in `localStorage` when offline and auto-flush upon reconnection.
+* `fn_pickup_proof`: In-app camera capture for bag pickup photo verification.
+* `fn_delivery_handover`: Payment-gated completion requiring COD cash confirmation or online verification + handover photo proof.
+* `fn_recenter_map`: 1-tap camera snap to rider coordinate on Mapbox.
+
+---
+
+### 👤 5. Customer Functions (`/customer`)
+* `fn_2step_booking`: Device GPS auto-detection, service selection, and slot booking.
+* `fn_qr_pickup_pass`: Dynamic on-screen QR pass for quick rider verification at bag handoff.
+* `fn_live_courier_tracking`: Real-time Mapbox map tracking rider location, street route, and dynamic ETA.
+* `fn_paymongo_checkout`: In-app checkout for GCash, Maya, and Card payments.
+* `fn_order_rating`: 1–5 star rating submission with review notes.
+* `fn_address_book`: Save multiple delivery addresses (Home, Work, Condo).
+
+---
+
+### 🤖 6. Automated Backend & AI Functions
+* `fn_status_machine_guard`: Enforces strict valid state transitions and role permission gates.
+* `fn_paymongo_webhook_handler`: Listens to `payment.paid` webhooks and auto-updates payment status to `paid`.
+* `fn_notification_dispatcher`: Dispatches real-time in-app alerts and web push notifications on order updates.
+* `fn_mapbox_directions_engine`: Calculates driving path geometry, distance (km), and estimated duration (mins).
+
+---
+
+## 📊 Order Status State Machine & Permissions
+
+| Transition | From Status | To Status | Allowed Trigger Roles | Required Payload / Action |
+| :---: | :--- | :--- | :--- | :--- |
+| **T1** | `pending` | `confirmed` | `branch_manager`, `staff` | Order confirmed |
+| **T2** | `confirmed` | `rider_assigned` | `branch_manager`, `staff` | Select `rider_id` |
+| **T3** | `rider_assigned` | `pickup_en_route` | `rider` | Tap "Accept & Start" |
+| **T4** | `pickup_en_route` | `picked_up` | `rider` | **Mandatory Bag Photo Proof** |
+| **T5** | `picked_up` | `at_facility` | `rider`, `staff` | Dropoff at counter |
+| **T6** | `at_facility` | `washing` | `staff`, `branch_manager` | **Digital Scale Weight (kg)** |
+| **T7** | `washing` | `drying` | `staff`, `branch_manager` | Advance cycle |
+| **T8** | `drying` | `folding` | `staff`, `branch_manager` | Advance cycle |
+| **T9** | `folding` | `ready_for_delivery` | `staff`, `branch_manager` | Bag packed & tagged |
+| **T10** | `ready_for_delivery` | `delivery_en_route` | `rider` | Tap "Start Delivery" |
+| **T11** | `delivery_en_route` | `delivered` | `rider` | **Handover Photo + COD Check** |
+| **T12** | `delivered` | `completed` | `customer`, `staff`, `admin` | Rating submitted / archived |
+| **TX** | Any uncompleted | `cancelled` | `customer` (if pending), `manager` | Cancellation reason |
+
+---
+
+## 🚀 Setup & Deployment
+
+### 1. Local Development Setup
+```bash
+# Clone the repository
+git clone https://github.com/Nowell222/gowashgo.git
+cd gowashgo
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env.local
+
+# Seed test accounts in database
+node scripts/seed-auth-users.mjs
+
+# Start local server
+npm run dev
+```
+
+### 2. Vercel 1-Click Deployment
+1. Go to **[vercel.com/new](https://vercel.com/new)** and import `Nowell222/gowashgo`.
+2. Add your Supabase, Mapbox, and PayMongo keys into Vercel's **Environment Variables**.
+3. Click **Deploy** &mdash; both frontend and backend serverless API routes deploy together instantly.
