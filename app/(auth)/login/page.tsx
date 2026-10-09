@@ -92,9 +92,6 @@ function LoginForm() {
 
   return (
     <>
-      <div style={{ textAlign: 'center', marginBottom: 14 }}>
-        <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain' }} />
-      </div>
       <h2 className="auth-card__heading">Welcome back</h2>
       <p className="auth-card__subheading">Sign in to your account to continue</p>
 
@@ -190,9 +187,15 @@ export default function LoginPage() {
   return (
     <div className="auth-card">
       <div className="auth-card__logo">
-        <div className="auth-card__logo-icon">W</div>
+        <img
+          src="/icons/gowashgo-icon.png"
+          alt="GoWashGo"
+          width={56}
+          height={56}
+          style={{ borderRadius: 14, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }}
+        />
         <h1 className="auth-card__logo-title">
-          <span className="gradient-text">WashGo</span>
+          <span className="gradient-text">GoWashGo</span>
         </h1>
         <p className="auth-card__logo-subtitle">Smart Laundry, Delivered</p>
       </div>

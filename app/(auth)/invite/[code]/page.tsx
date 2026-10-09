@@ -138,8 +138,8 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
     return (
       <div className="auth-card">
         <div className="auth-card__logo">
-          <div className="auth-card__logo-icon">W</div>
-          <h1 className="auth-card__logo-title"><span className="gradient-text">WashGo</span></h1>
+          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
+          <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
         </div>
         <div style={{ textAlign: 'center', padding: 'var(--space-8) 0' }}>
           <div className="btn__spinner" style={{ margin: '0 auto', borderColor: 'var(--color-border)', borderTopColor: 'var(--color-primary)' }} />
@@ -155,8 +155,8 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
     return (
       <div className="auth-card">
         <div className="auth-card__logo">
-          <div className="auth-card__logo-icon">W</div>
-          <h1 className="auth-card__logo-title"><span className="gradient-text">WashGo</span></h1>
+          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
+          <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
         </div>
         <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
           <div style={{
@@ -181,8 +181,8 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
   return (
     <div className="auth-card">
       <div className="auth-card__logo">
-        <div className="auth-card__logo-icon">W</div>
-        <h1 className="auth-card__logo-title"><span className="gradient-text">WashGo</span></h1>
+        <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
+        <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
         <p className="auth-card__logo-subtitle">Join the team</p>
       </div>
 
