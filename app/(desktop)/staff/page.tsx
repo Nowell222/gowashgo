@@ -177,12 +177,12 @@ export default function StaffDashboardPage() {
                       </td>
                       <td>
                         {order.weight_kg ? (
-                          <div style={{ fontWeight: 700, color: '#0284C7' }}>
-                            ⚖️ {order.weight_kg} kg
+                          <div style={{ fontWeight: 700, color: '#0E7490' }}>
+                            {order.weight_kg} kg
                           </div>
                         ) : (
                           <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-                            Pending Scale
+                            Standard Load
                           </div>
                         )}
                         {order.order_items?.[0]?.wash_recommendation && (
@@ -202,25 +202,36 @@ export default function StaffDashboardPage() {
                           fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: 4,
-                          background: order.payment_method === 'online' ? '#EFF6FF' : '#F0FDF4',
-                          color: order.payment_method === 'online' ? '#1D4ED8' : '#15803D',
+                          background: order.payment_method === 'online' ? '#ECFEFF' : '#FEF3C7',
+                          color: order.payment_method === 'online' ? '#0E7490' : '#B45309',
                         }}>
-                          {order.payment_method === 'online' ? '💳 Online' : '💵 Cash (COD)'}
+                          {order.payment_method === 'online' ? 'Online' : 'Cash (COD)'}
                         </span>
                       </td>
                       <td style={{ fontWeight: 700, color: '#0F172A' }}>
                         {order.weight_kg ? formatPeso(order.total) : `${formatPeso(order.total)} (Est)`}
                       </td>
                       <td>
-                        {order.status === 'at_facility' ? (
-                          <button
-                            type="button"
-                            className="btn btn--primary btn--sm"
-                            style={{ background: '#0284C7', fontWeight: 700 }}
-                            onClick={() => setIntakeOrder(order)}
-                          >
-                            ⚖️ Weigh &amp; Start Wash
-                          </button>
+                        {order.status === 'at_facility' || order.status === 'washing' ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              className="btn btn--primary btn--sm"
+                              style={{ background: '#0E7490', fontWeight: 700 }}
+                              disabled={updatingId === order.id}
+                              onClick={() => handleAdvanceStatus(order.id, 'ready_for_delivery')}
+                            >
+                              {updatingId === order.id ? <span className="btn__spinner" /> : 'Ready for Delivery →'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn--secondary btn--sm"
+                              style={{ fontSize: 11 }}
+                              onClick={() => setIntakeOrder(order)}
+                            >
+                              Inspect / Flag
+                            </button>
+                          </div>
                         ) : primaryNext ? (
                           <button
                             type="button"
@@ -240,6 +251,7 @@ export default function StaffDashboardPage() {
                           </span>
                         )}
                       </td>
+
                     </tr>
                   );
                 })}

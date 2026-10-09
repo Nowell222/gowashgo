@@ -114,16 +114,28 @@ export async function GET(request: Request) {
       );
     }
 
+    let targetRiderId = riderId;
+    if (orderId && !targetRiderId) {
+      const { data: ord } = await supabase
+        .from('orders')
+        .select('rider_id')
+        .eq('id', orderId)
+        .single();
+      if (ord?.rider_id) {
+        targetRiderId = ord.rider_id;
+      }
+    }
+
     let query = supabase
       .from('rider_locations')
       .select('*')
       .order('recorded_at', { ascending: false })
       .limit(1);
 
-    if (orderId) {
+    if (targetRiderId) {
+      query = query.eq('rider_id', targetRiderId);
+    } else if (orderId) {
       query = query.eq('order_id', orderId);
-    } else if (riderId) {
-      query = query.eq('rider_id', riderId);
     }
 
     const { data: locations, error } = await query;

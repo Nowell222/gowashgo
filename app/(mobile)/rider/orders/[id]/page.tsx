@@ -3,8 +3,9 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { formatPeso } from '@/lib/utils/currency';
-import { formatOrderStatus, getOrderStatusColor, getNextStatuses } from '@/lib/orders/status-machine';
+import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
 import { useRiderGpsTracker } from '@/lib/tracking/rider-gps';
+import { LaundryIcons } from '@/components/common/LaundryIcons';
 import LiveTrackingMap from '@/components/maps/LiveTrackingMap';
 import PhotoCapture from '@/components/common/PhotoCapture';
 import type { OrderWithDetails, OrderStatus } from '@/lib/types';
@@ -16,10 +17,12 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
   const [updating, setUpdating] = useState(false);
   const [simStep, setSimStep] = useState(0);
 
-  // Delivery Handover verification state
+  // Doorstep Portable Scale Weigh-in state
+  const [scaleWeight, setScaleWeight] = useState<string>('4.0');
   const [cashCollected, setCashCollected] = useState(false);
   const [deliveryProofUrl, setDeliveryProofUrl] = useState<string>('');
   const [pickupProofUrl, setPickupProofUrl] = useState<string>('');
+  const [systemAlert, setSystemAlert] = useState<string | null>(null);
 
   async function loadOrder() {
     try {
@@ -30,6 +33,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
         if (json.data.cash_collected) setCashCollected(true);
         if (json.data.delivery_proof_url) setDeliveryProofUrl(json.data.delivery_proof_url);
         if (json.data.picked_up_proof_url) setPickupProofUrl(json.data.picked_up_proof_url);
+        if (json.data.weight_kg) setScaleWeight(String(json.data.weight_kg));
       }
     } catch (err) {
       console.error('Error loading rider order detail:', err);
@@ -47,24 +51,32 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
   const isDeliveryStage = order && order.status === 'delivery_en_route';
 
   // Activate device GPS telemetry watch when en-route
-  const { currentLocation, pingsSent, lastPingTime, isTracking, gpsError } = useRiderGpsTracker({
+  const { currentLocation, pingsSent, lastPingTime, isTracking } = useRiderGpsTracker({
     activeOrderId: id,
     enabled: Boolean(isEnRoute),
   });
 
-  const [systemAlert, setSystemAlert] = useState<string | null>(null);
+  const parsedScaleWeight = parseFloat(scaleWeight) || 0;
+  const branchRatePerKg = (order?.branch as any)?.price_per_kg || 3500;
+  const liveComputedSubtotal = Math.round(parsedScaleWeight * branchRatePerKg);
+  const liveDeliveryFee = order?.delivery_fee || 5000;
+  const liveComputedTotal = liveComputedSubtotal + liveDeliveryFee;
 
   async function handleAdvanceStatus(targetStatus: OrderStatus) {
     if (targetStatus === 'picked_up') {
+      if (parsedScaleWeight <= 0) {
+        setSystemAlert('Please enter a valid scale weight from your portable scale.');
+        return;
+      }
       if (!pickupProofUrl) {
-        setSystemAlert('Please take or upload a photo proof of the laundry bag before confirming pickup.');
+        setSystemAlert('Please take or upload a photo proof of the weighed laundry bag before confirming pickup.');
         return;
       }
     }
 
     if (targetStatus === 'delivered') {
       if (order?.payment_method === 'cash' && !cashCollected) {
-        setSystemAlert('Please confirm that you have collected the cash from the customer.');
+        setSystemAlert('Please confirm that you have collected cash from the customer.');
         return;
       }
       if (!deliveryProofUrl) {
@@ -84,6 +96,7 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
           cash_collected: cashCollected,
           delivery_proof_url: deliveryProofUrl || undefined,
           picked_up_proof_url: pickupProofUrl || undefined,
+          weight_kg: targetStatus === 'picked_up' ? parsedScaleWeight : undefined,
         }),
       });
       const json = await res.json();
@@ -134,16 +147,16 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
   if (loading) {
     return (
       <div className="fade-in">
-        <div className="skeleton" style={{ height: 28, width: '40%', marginBottom: 12 }} />
-        <div className="skeleton" style={{ height: 140, borderRadius: 'var(--radius-lg)' }} />
+        <div className="skeleton" style={{ height: 110, borderRadius: 'var(--radius-lg)', marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-lg)' }} />
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
-        <p style={{ color: 'var(--color-danger)' }}>Order not found</p>
+      <div className="flat-block flat-block--linen" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+        <p style={{ color: '#B91C1C', fontWeight: 700 }}>Order not found</p>
         <Link href="/rider" className="btn btn--secondary btn--sm" style={{ marginTop: 'var(--space-4)' }}>
           ← Back to Cockpit
         </Link>
@@ -151,14 +164,52 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
     );
   }
 
-  const nextOptions = getNextStatuses(order.status as OrderStatus, 'rider');
   const statusColor = getOrderStatusColor(order.status as OrderStatus);
 
   return (
     <div className="fade-in" style={{ paddingBottom: 'var(--space-10)' }}>
+      {/* ================= TOP SPOTLIGHT: VERIFIED WEIGHT & INSTANT PRICE ================= */}
+      <div className="spotlight-ticket">
+        <div className="spotlight-ticket__header">
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.Scale size={16} color="#B45309" />
+            Verified Scale Receipt
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{order.order_number}</span>
+        </div>
+
+        <div className="spotlight-ticket__values">
+          <div>
+            <div style={{ fontSize: 10, color: '#78716C', textTransform: 'uppercase', fontWeight: 700 }}>
+              {order.weight_kg ? 'Verified Weight' : 'Doorstep Scale'}
+            </div>
+            <div className="spotlight-ticket__weight">
+              {order.weight_kg ? `${order.weight_kg} kg` : `${parsedScaleWeight.toFixed(1)} kg (Est)`}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 10, color: '#78716C', textTransform: 'uppercase', fontWeight: 700 }}>
+              {order.weight_kg ? 'Instant Total Price' : 'Calculated Total'}
+            </div>
+            <div className="spotlight-ticket__price">
+              {order.weight_kg ? formatPeso(order.total) : formatPeso(liveComputedTotal)}
+            </div>
+          </div>
+        </div>
+
+        <div className="spotlight-ticket__footer">
+          <span>
+            {order.payment_method === 'online' ? 'Online Payment (GCash / Maya)' : 'Cash on Delivery (COD)'}
+          </span>
+          <span style={{ fontWeight: 800, color: order.weight_kg ? '#0E7490' : '#B45309' }}>
+            {order.weight_kg ? 'Weighed by Courier ✓' : 'Weigh at Doorstep'}
+          </span>
+        </div>
+      </div>
+
       {/* Top Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-        <Link href="/rider" style={{ fontSize: 'var(--text-sm)', color: '#0284C7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+        <Link href="/rider" style={{ fontSize: 'var(--text-sm)', color: '#0E7490', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
           ← Back to Cockpit
         </Link>
         <span className={`status-badge status-badge--${statusColor}`}>
@@ -166,18 +217,8 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
         </span>
       </div>
 
-      {/* Title */}
-      <div style={{ marginBottom: 'var(--space-4)' }}>
-        <h1 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-          {order.order_number}
-        </h1>
-        <p style={{ color: '#64748B', fontSize: 'var(--text-xs)', marginTop: 2 }}>
-          {order.branch?.name} • Placed {new Date(order.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
-        </p>
-      </div>
-
       {/* Live Map Box */}
-      <div style={{ marginBottom: 'var(--space-4)' }}>
+      <div style={{ marginBottom: 'var(--space-3)' }}>
         <LiveTrackingMap
           branchLocation={order.branch ? {
             lat: order.branch.latitude,
@@ -199,79 +240,128 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
 
       {/* Telemetry Status Bar */}
       {isEnRoute && (
-        <div className="card" style={{
-          marginBottom: 'var(--space-4)',
-          background: isTracking ? '#F0FDF4' : '#FFFBEB',
-          border: isTracking ? '1px solid #BBF7D0' : '1px solid #FDE68A',
-        }}>
+        <div className={`flat-block ${isTracking ? 'flat-block--teal' : 'flat-block--amber'}`} style={{ padding: '10px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>{isTracking ? '📡' : '⚠️'}</span>
+              <LaundryIcons.Pin size={18} color={isTracking ? '#0E7490' : '#B45309'} />
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: isTracking ? '#166534' : '#92400E' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: isTracking ? '#0E7490' : '#92400E' }}>
                   {isTracking ? 'Device GPS Telemetry Active' : 'Acquiring GPS Signal'}
                 </div>
-                <div style={{ fontSize: '10px', color: isTracking ? '#15803D' : '#B45309' }}>
+                <div style={{ fontSize: '10px', color: isTracking ? '#0891B2' : '#B45309' }}>
                   {pingsSent} pings sent {lastPingTime ? `• Last: ${lastPingTime.toLocaleTimeString()}` : ''}
                 </div>
               </div>
             </div>
 
-            {/* Quick simulation trigger for testing */}
             <button
               type="button"
               className="btn btn--secondary btn--sm"
               onClick={handleSimulateGpsStep}
               style={{ fontSize: '10px', padding: '4px 8px' }}
             >
-              Simulate Move 🛵
+              Simulate Move
             </button>
           </div>
         </div>
       )}
 
-      {/* Pickup Photo Proof Box (if in pickup_en_route) */}
+      {/* Doorstep Portable Scale Weigh-in Box (if pickup_en_route) */}
       {order.status === 'pickup_en_route' && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', background: '#F8FAFC', border: '1.5px solid #BAE6FD' }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
-            🧺 Bag Pickup Photo Proof
+        <div className="flat-block flat-block--amber" style={{ padding: '16px' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#92400E', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.Scale size={18} color="#92400E" />
+            Doorstep Scale Weigh-in &amp; Instant Pricing
           </div>
-          <PhotoCapture
-            value={pickupProofUrl}
-            onChange={(dataUrl) => setPickupProofUrl(dataUrl)}
-            onClear={() => setPickupProofUrl('')}
-            buttonText="📷 Snap / Choose Bag Photo"
-            label="Bag Pickup Proof"
-            disabled={updating}
-          />
+          <p style={{ fontSize: 11, color: '#78716C', marginTop: 2, marginBottom: 12 }}>
+            Weigh bag on portable scale before pickup. Total price computes instantly for the customer.
+          </p>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#92400E', textTransform: 'uppercase', marginBottom: 4 }}>
+              Scale Weight (kg)
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="number"
+                step="0.1"
+                min="0.5"
+                required
+                value={scaleWeight}
+                onChange={(e) => setScaleWeight(e.target.value)}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 24,
+                  fontWeight: 800,
+                  color: '#0E7490',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: '#FFFFFF',
+                  width: '100%',
+                }}
+              />
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#92400E' }}>kg</span>
+            </div>
+
+            {/* Instant Calculation */}
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed rgba(180, 83, 9, 0.25)', fontSize: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#78716C' }}>
+                <span>{parsedScaleWeight.toFixed(1)} kg × ₱{(branchRatePerKg / 100).toFixed(2)}/kg:</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formatPeso(liveComputedSubtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#78716C', marginTop: 2 }}>
+                <span>Delivery:</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formatPeso(liveDeliveryFee)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(180, 83, 9, 0.2)' }}>
+                <strong style={{ color: '#92400E', fontSize: 12 }}>Instant Total:</strong>
+                <strong style={{ fontSize: 18, color: '#0E7490', fontFamily: 'var(--font-mono)' }}>{formatPeso(liveComputedTotal)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#1C1917', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <LaundryIcons.Camera size={14} color="#0E7490" />
+              Bag &amp; Scale Photo Proof
+            </div>
+            <PhotoCapture
+              value={pickupProofUrl}
+              onChange={(dataUrl) => setPickupProofUrl(dataUrl)}
+              onClear={() => setPickupProofUrl('')}
+              buttonText="Snap / Choose Bag Photo"
+              label="Bag Pickup Proof"
+              disabled={updating}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="btn btn--primary btn--full"
+            style={{ background: '#0E7490', fontWeight: 800 }}
+            disabled={updating || !pickupProofUrl || parsedScaleWeight <= 0}
+            onClick={() => handleAdvanceStatus('picked_up')}
+          >
+            {updating ? <span className="btn__spinner" /> : `Confirm ${parsedScaleWeight.toFixed(1)}kg (${formatPeso(liveComputedTotal)}) & Pickup ✓`}
+          </button>
         </div>
       )}
 
       {/* Delivery Handover Card (if delivery en route) */}
       {isDeliveryStage && (
-        <div className="card" style={{
-          marginBottom: 'var(--space-4)',
-          border: '1.5px solid #BAE6FD',
-          background: '#FFFFFF',
-        }}>
-          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#0F172A', marginBottom: 8 }}>
+        <div className="flat-block flat-block--linen" style={{ padding: '16px' }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#1C1917', marginBottom: 8 }}>
             Delivery Handover Checklist
           </h3>
 
-          {/* Cash Collection Confirmation */}
           {order.payment_method === 'cash' ? (
-            <div style={{
-              background: '#FFFBEB',
-              border: '1px solid #FDE68A',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px 14px',
-              marginBottom: 12,
-            }}>
+            <div className="flat-block flat-block--amber" style={{ padding: '12px 14px', marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: '#92400E' }}>
-                  💵 Cash to Collect:
+                  Cash to Collect:
                 </span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: '#B45309' }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#B45309', fontFamily: 'var(--font-mono)' }}>
                   {formatPeso(order.total)}
                 </span>
               </div>
@@ -282,116 +372,77 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
                   onChange={(e) => setCashCollected(e.target.checked)}
                   style={{ accentColor: '#D97706', width: 16, height: 16 }}
                 />
-                I have collected {formatPeso(order.total)} from the customer
+                I have collected {formatPeso(order.total)} in cash from customer
               </label>
             </div>
           ) : (
-            <div style={{
-              background: '#EFF6FF',
-              border: '1px solid #BFDBFE',
-              borderRadius: 'var(--radius-md)',
-              padding: '10px 14px',
-              marginBottom: 12,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
+            <div className="flat-block flat-block--teal" style={{ padding: '12px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#1E40AF' }}>
-                  💳 Online Payment (Total: {formatPeso(order.total)})
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#0E7490' }}>
+                  Online Payment ({formatPeso(order.total)})
                 </div>
-                <div style={{ fontSize: 11, color: '#3B82F6' }}>
-                  Verified via PayMongo / Checkout Link
+                <div style={{ fontSize: 11, color: '#0891B2' }}>
+                  Verified via PayMongo / Online Checkout
                 </div>
               </div>
-              <span style={{ fontSize: 20 }}>✅</span>
+              <LaundryIcons.CheckmarkBadge size={20} color="#0E7490" />
             </div>
           )}
 
-          {/* REAL Device Camera / File Upload for Delivery Photo Proof */}
-          <div style={{
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 14px',
-            marginBottom: 12,
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 6 }}>
-              📸 Mandatory Delivery Proof Photo
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#1C1917', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <LaundryIcons.Camera size={14} color="#0E7490" />
+              Delivery Handover Proof Photo
             </div>
-
             <PhotoCapture
               value={deliveryProofUrl}
               onChange={(dataUrl) => setDeliveryProofUrl(dataUrl)}
               onClear={() => setDeliveryProofUrl('')}
-              buttonText="📷 Snap / Choose Handover Photo"
+              buttonText="Snap / Choose Handover Photo"
               label="Delivery Handover Proof"
               disabled={updating}
             />
           </div>
-        </div>
-      )}
 
-      {/* Action Prompts for Rider */}
-      {nextOptions.length > 0 && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)', border: '1px solid #0284C7', background: '#FFFFFF' }}>
-          <div style={{ fontSize: '11px', color: '#0284C7', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.04em' }}>
-            Delivery Action
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {nextOptions.map((status) => (
-              <button
-                key={status}
-                type="button"
-                className="btn btn--primary btn--full btn--lg"
-                disabled={
-                  updating ||
-                  (status === 'picked_up' && !pickupProofUrl) ||
-                  (status === 'delivered' && ((order.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl))
-                }
-                onClick={() => handleAdvanceStatus(status)}
-              >
-                {updating ? <span className="btn__spinner" /> : `Mark as "${formatOrderStatus(status)}"`}
-              </button>
-            ))}
-          </div>
+          <button
+            type="button"
+            className="btn btn--primary btn--full"
+            style={{ background: '#0E7490', fontWeight: 800 }}
+            disabled={updating || (order.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl}
+            onClick={() => handleAdvanceStatus('delivered')}
+          >
+            {updating ? <span className="btn__spinner" /> : 'Confirm & Complete Delivery ✓'}
+          </button>
         </div>
       )}
 
       {/* Customer & Address Details */}
-      <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-        <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 700, marginBottom: 'var(--space-3)', color: '#0F172A' }}>
-          Customer &amp; Location
+      <div className="flat-block flat-block--linen">
+        <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: '#1C1917', textTransform: 'uppercase', marginBottom: 8 }}>
+          Order Information
         </h3>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-          <div>
-            <div style={{ fontWeight: 700, color: '#0F172A' }}>{order.customer?.full_name}</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: '#64748B' }}>{order.customer?.phone || 'No phone'}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-sm)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#78716C' }}>Customer</span>
+            <span style={{ fontWeight: 700, color: '#1C1917' }}>{order.customer?.full_name}</span>
           </div>
           {order.customer?.phone && (
-            <a href={`tel:${order.customer.phone}`} className="btn btn--secondary btn--sm" style={{ border: '1px solid #CBD5E1' }}>
-              📞 Call
-            </a>
-          )}
-        </div>
-
-        <div className="divider" style={{ margin: '8px 0' }} />
-
-        <div style={{ fontSize: 'var(--text-xs)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div>
-            <span style={{ color: '#64748B', fontWeight: 700 }}>PICKUP: </span>
-            <span style={{ color: '#0F172A' }}>{order.pickup_address}</span>
-          </div>
-          <div>
-            <span style={{ color: '#64748B', fontWeight: 700 }}>DELIVERY: </span>
-            <span style={{ color: '#0F172A' }}>{order.delivery_address}</span>
-          </div>
-          {order.special_instructions && (
-            <div style={{ color: '#B45309', background: '#FFFBEB', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid #FDE68A', marginTop: 4 }}>
-              <strong>Note:</strong> {order.special_instructions}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#78716C' }}>Phone</span>
+              <a href={`tel:${order.customer.phone}`} style={{ color: '#0E7490', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <LaundryIcons.Phone size={14} color="#0E7490" />
+                {order.customer.phone}
+              </a>
             </div>
           )}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#78716C' }}>Pickup At</span>
+            <span style={{ maxWidth: 220, textAlign: 'right', color: '#1C1917' }}>{order.pickup_address}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#78716C' }}>Deliver To</span>
+            <span style={{ maxWidth: 220, textAlign: 'right', color: '#1C1917' }}>{order.delivery_address}</span>
+          </div>
         </div>
       </div>
 
@@ -400,23 +451,21 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
         <div className="modal-backdrop" onClick={() => setSystemAlert(null)}>
           <div className="modal" style={{ maxWidth: 380, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div style={{
-              width: 52,
-              height: 52,
+              width: 48,
+              height: 48,
               borderRadius: '50%',
               background: '#FEF3C7',
-              border: '2px solid #FDE68A',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 24,
               margin: '0 auto 12px',
             }}>
-              ⚠️
+              <LaundryIcons.AlertDiscrepancy size={24} color="#D97706" />
             </div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', marginBottom: 6 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1C1917', marginBottom: 6 }}>
               Action Required
             </h3>
-            <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.4, marginBottom: 18 }}>
+            <p style={{ fontSize: 13, color: '#78716C', lineHeight: 1.4, marginBottom: 18 }}>
               {systemAlert}
             </p>
             <button

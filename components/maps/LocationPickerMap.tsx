@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import LaundryIcons from '@/components/common/LaundryIcons';
 
 interface LocationPickerMapProps {
   latitude: number;
@@ -73,19 +74,20 @@ export default function LocationPickerMap({
       pinEl.className = 'location-picker-pin';
       pinEl.innerHTML = `
         <div style="
-          width: 40px;
-          height: 40px;
-          background: #0284C7;
+          width: 38px;
+          height: 38px;
+          background: #0E7490;
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 3px solid #FFFFFF;
-          box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+          border: 2.5px solid #FFFFFF;
           cursor: grab;
         ">
-          <div style="transform: rotate(45deg); font-size: 16px;">📍</div>
+          <div style="transform: rotate(45deg); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </div>
         </div>
       `;
 
@@ -165,38 +167,41 @@ export default function LocationPickerMap({
   };
 
   return (
-    <div style={{
-      background: '#FFFFFF',
-      border: '1px solid #BAE6FD',
-      borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden',
-      boxShadow: '0 4px 16px rgba(14, 165, 233, 0.08)',
-      marginTop: 8,
-      marginBottom: 16,
-    }}>
+    <div
+      style={{
+        background: '#FAF8F5',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginTop: 8,
+        marginBottom: 16,
+      }}
+    >
       {/* Location Bar Header */}
-      <div style={{
-        padding: '12px 14px',
-        background: '#F0F9FF',
-        borderBottom: '1px solid #BAE6FD',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-      }}>
+      <div
+        style={{
+          padding: '12px 14px',
+          background: '#F3EFE6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+        }}
+      >
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 10, color: '#0369A1', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {label} • Drag Pin or Click Map
+          <div style={{ fontSize: 10, color: 'var(--color-primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {label} • Drag Pin or Tap Map
           </div>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: '#0F172A',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            marginTop: 2,
-          }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--color-text-dark)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginTop: 2,
+            }}
+          >
             {currentAddress || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`}
           </div>
         </div>
@@ -206,20 +211,23 @@ export default function LocationPickerMap({
           type="button"
           onClick={handleUseCurrentLocation}
           disabled={locating}
-          className="btn btn--secondary btn--sm"
           style={{
-            background: '#FFFFFF',
-            border: '1px solid #0284C7',
-            color: '#0284C7',
-            fontWeight: 700,
+            background: 'var(--color-primary)',
+            color: '#FFFFFF',
+            border: 'none',
+            fontWeight: 800,
             fontSize: 11,
-            padding: '6px 10px',
-            borderRadius: 'var(--radius-sm)',
-            boxShadow: '0 2px 4px rgba(2, 132, 199, 0.1)',
+            padding: '6px 12px',
+            borderRadius: 8,
+            cursor: 'pointer',
             flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
           }}
         >
-          {locating ? '📡 Locating...' : '🎯 Locate Me'}
+          <LaundryIcons.Pin size={12} color="#FFFFFF" />
+          <span>{locating ? 'Locating...' : 'Locate Me'}</span>
         </button>
       </div>
 

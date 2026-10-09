@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { formatPeso } from '@/lib/utils/currency';
+import { LaundryIcons } from '@/components/common/LaundryIcons';
 import type { OrderWithDetails, ClothingType, FabricType, ColorCategory } from '@/lib/types';
 
 interface WeighIntakeModalProps {
@@ -26,17 +27,14 @@ export default function WeighIntakeModal({
   onClose,
   onConfirm,
 }: WeighIntakeModalProps) {
-  const [weightKg, setWeightKg] = useState<string>(order.weight_kg ? String(order.weight_kg) : '6.5');
+  const verifiedWeight = order.weight_kg || 0;
   const [clothingType, setClothingType] = useState<ClothingType>('shirt');
   const [fabricType, setFabricType] = useState<FabricType>('cotton');
   const [colorCategory, setColorCategory] = useState<ColorCategory>('mixed');
   const [hasStains, setHasStains] = useState(false);
   const [stainDescription, setStainDescription] = useState('');
 
-  // Tier A1: Order Number Verification from Tape
-  const [verifiedOrderNumber, setVerifiedOrderNumber] = useState<string>(order.order_number);
-
-  // Tier A4: Discrepancy / Damaged Item Flag
+  // Discrepancy / Damaged Item Flag
   const [hasDiscrepancy, setHasDiscrepancy] = useState(Boolean(order.intake_discrepancy_note));
   const [discrepancyNote, setDiscrepancyNote] = useState(order.intake_discrepancy_note || '');
 
@@ -45,23 +43,15 @@ export default function WeighIntakeModal({
 
   if (!isOpen) return null;
 
-  const parsedWeight = parseFloat(weightKg) || 0;
   const pricePerKg = (order.branch as any)?.price_per_kg || 3500;
-  const computedSubtotal = Math.round(parsedWeight * pricePerKg);
-  const deliveryFee = order.delivery_fee || 5000;
-  const computedTotal = computedSubtotal + deliveryFee;
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (parsedWeight <= 0) {
-      alert('Please enter a valid scale weight greater than 0 kg.');
-      return;
-    }
 
     setSubmitting(true);
     try {
       await onConfirm({
-        weight_kg: parsedWeight,
+        weight_kg: verifiedWeight || 5.0,
         clothing_types: [clothingType],
         fabric_types: [fabricType],
         color_categories: [colorCategory],
@@ -72,11 +62,12 @@ export default function WeighIntakeModal({
       });
       onClose();
     } catch (err: any) {
-      alert(err?.message || 'Failed to record weighing intake');
+      alert(err?.message || 'Failed to record intake inspection');
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div
@@ -176,7 +167,7 @@ export default function WeighIntakeModal({
             }}>
               <div>
                 <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
-                  🏷️ Tape / Bag Order Tag
+                  Tape / Bag Order Tag
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#0F172A', fontSize: 14 }}>
                   {order.order_number}
@@ -187,45 +178,28 @@ export default function WeighIntakeModal({
               </span>
             </div>
 
-            {/* Scale Weight Input */}
+            {/* Read-Only Verified Doorstep Scale Weight from Rider */}
             <div style={{
-              background: '#F8FAFC',
-              border: '2px solid #0284C7',
+              background: '#ECFEFF',
               borderRadius: 'var(--radius-lg)',
-              padding: '12px 16px',
+              padding: '14px 16px',
             }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', marginBottom: 6 }}>
-                ⚖️ Verified Scale Weight (kg)
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  required
-                  value={weightKg}
-                  onChange={(e) => setWeightKg(e.target.value)}
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: '#0F172A',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid #CBD5E1',
-                    width: '100%',
-                    background: '#FFFFFF',
-                  }}
-                  placeholder="e.g. 6.5"
-                />
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#475569' }}>kg</span>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#0E7490', textTransform: 'uppercase', marginBottom: 4 }}>
+                Weighed at Doorstep by Courier
               </div>
-
-              {/* Live Pricing Breakdown */}
-              <div style={{ marginTop: 8, fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: 6 }}>
-                <span style={{ color: '#64748B', fontSize: 11 }}>{parsedWeight} kg × {formatPeso(pricePerKg)}/kg + {formatPeso(deliveryFee)} fee:</span>
-                <strong style={{ fontSize: 15, color: '#0284C7' }}>{formatPeso(computedTotal)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#0E7490', fontFamily: 'var(--font-mono)' }}>
+                  {order.weight_kg ? `${order.weight_kg} kg` : 'Pre-weighed'}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#B45309', fontFamily: 'var(--font-mono)' }}>
+                  {formatPeso(order.total)}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#0891B2', marginTop: 4 }}>
+                Rate: ₱{(pricePerKg / 100).toFixed(2)}/kg • Scale intake completed by rider
               </div>
             </div>
+
 
             {/* Garment & Fabric Quick Tags */}
             <div>
@@ -300,7 +274,7 @@ export default function WeighIntakeModal({
                   onChange={(e) => setHasDiscrepancy(e.target.checked)}
                   style={{ accentColor: '#D97706', width: 16, height: 16 }}
                 />
-                ⚠️ Discrepancy or existing damage noted before wash
+                Discrepancy or existing damage noted before wash
               </label>
               {hasDiscrepancy && (
                 <div style={{ marginTop: 6 }}>
@@ -360,9 +334,10 @@ export default function WeighIntakeModal({
               style={{ flex: 2 }}
               disabled={submitting}
             >
-              {submitting ? <span className="btn__spinner" /> : `Confirm ${parsedWeight}kg & Start Washing →`}
+              {submitting ? <span className="btn__spinner" /> : 'Confirm Inspection & Wash →'}
             </button>
           </div>
+
         </form>
       </div>
     </div>

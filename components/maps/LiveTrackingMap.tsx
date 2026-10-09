@@ -212,11 +212,11 @@ export default function LiveTrackingMap({
         const branchEl = document.createElement('div');
         branchEl.className = 'mapbox-custom-pin branch-pin';
         branchEl.innerHTML = `
-          <div style="background: #0284C7; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);">
-            🏪
+          <div style="background: #0E7490; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="12" cy="13" r="5"/><circle cx="7" cy="5" r="1"/></svg>
           </div>
-          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-            ${branchLocation.label || 'Branch'}
+          <div style="font-size: 10px; font-weight: 800; background: #FFFFFF; color: #0E7490; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; text-align: center;">
+            ${branchLocation.label || 'Shop Branch'}
           </div>
         `;
         branchMarkerRef.current = new mapboxgl.Marker({ element: branchEl })
@@ -227,10 +227,10 @@ export default function LiveTrackingMap({
         const targetEl = document.createElement('div');
         targetEl.className = 'mapbox-custom-pin target-pin';
         targetEl.innerHTML = `
-          <div style="background: #10B981; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
-            📍
+          <div style="background: #D97706; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
           </div>
-          <div style="font-size: 10px; font-weight: 700; background: #FFFFFF; color: #0F172A; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
+          <div style="font-size: 10px; font-weight: 800; background: #FFFFFF; color: #D97706; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; text-align: center;">
             ${targetLabel}
           </div>
         `;
@@ -244,10 +244,10 @@ export default function LiveTrackingMap({
           riderEl.className = 'mapbox-custom-pin rider-pin';
           riderEl.style.transition = 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)';
           riderEl.innerHTML = `
-            <div style="background: #0284C7; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 3px solid #FFFFFF; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.6);">
-              🏍️
+            <div style="background: #0E7490; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2.5px solid #FFFFFF;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 18h4l3-7h4"/><path d="M17 11h2l2 4v3h-3"/></svg>
             </div>
-            <div style="font-size: 10px; font-weight: 800; background: #0F172A; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); text-align: center;">
+            <div style="font-size: 10px; font-weight: 800; background: #1C1917; color: #FFFFFF; padding: 2px 6px; border-radius: 4px; margin-top: 2px; white-space: nowrap; text-align: center;">
               ${riderName || 'Rider'}
             </div>
           `;
@@ -338,11 +338,9 @@ export default function LiveTrackingMap({
   return (
     <div style={{
       position: 'relative',
-      borderRadius: 'var(--radius-xl)',
+      borderRadius: 18,
       overflow: 'hidden',
-      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-      border: '1.5px solid #BAE6FD',
-      background: '#F8FAFC',
+      background: '#F3EFE6',
       height: 320,
     }}>
       {/* Floating Status & ETA Card */}
@@ -352,13 +350,9 @@ export default function LiveTrackingMap({
         left: 12,
         right: 12,
         zIndex: 10,
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        borderRadius: 'var(--radius-lg)',
+        background: 'rgba(255, 255, 255, 0.96)',
+        borderRadius: 14,
         padding: '10px 14px',
-        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)',
-        border: '1px solid rgba(186, 230, 253, 0.8)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -368,24 +362,23 @@ export default function LiveTrackingMap({
             width: 10,
             height: 10,
             borderRadius: '50%',
-            background: isEnRoute ? '#10B981' : '#0284C7',
-            boxShadow: isEnRoute ? '0 0 10px #10B981' : 'none',
+            background: isEnRoute ? '#10B981' : 'var(--color-primary)',
           }} />
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {isEnRoute ? '🚀 Live Navigation En Route' : '📍 Courier Route'}
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isEnRoute ? 'Live Courier En Route' : 'Courier Route'}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-text-dark)' }}>
               {orderNumber ? `${orderNumber} • ` : ''}{targetLabel}
             </div>
           </div>
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, color: '#64748B', fontWeight: 600 }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600 }}>
             {routeDistanceKm ? `${routeDistanceKm} km away` : 'Estimated Arrival'}
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: isEnRoute ? '#059669' : '#0284C7' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-mono)', color: isEnRoute ? '#059669' : 'var(--color-primary)' }}>
             ~{effectiveEta} mins
           </div>
         </div>
@@ -402,20 +395,19 @@ export default function LiveTrackingMap({
             left: 14,
             zIndex: 10,
             background: '#FFFFFF',
-            border: '1px solid #CBD5E1',
-            borderRadius: 'var(--radius-full)',
-            padding: '6px 12px',
+            border: 'none',
+            borderRadius: 20,
+            padding: '6px 14px',
             fontSize: '11px',
-            fontWeight: 700,
-            color: '#0284C7',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            fontWeight: 800,
+            color: 'var(--color-primary)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
+            gap: 6,
           }}
         >
-          🎯 Recenter
+          <span>Recenter Map</span>
         </button>
       )}
 
@@ -430,15 +422,14 @@ export default function LiveTrackingMap({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#F0F9FF',
+          background: '#F3EFE6',
           padding: 20,
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🗺️</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-text-dark)' }}>
             Live Street Navigation Active
           </div>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>
             Rider is en route to {targetLabel} ({effectiveEta} mins ETA)
           </div>
         </div>

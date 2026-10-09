@@ -103,3 +103,61 @@ export function getWashRecommendation(input: WashRecommendationInput): WashRecom
     notes: notes_parts.join(' ') || 'Standard wash cycle recommended.',
   };
 }
+
+/**
+ * Intelligent Wash & Garment Care Recommendation via Google Gemini Flash AI.
+ * Falls back safely to rule-based engine if offline or timed out.
+ */
+export async function getAiWashRecommendation(input: WashRecommendationInput): Promise<WashRecommendation> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return getWashRecommendation(input);
+  }
+
+  try {
+    const prompt = `You are an expert commercial laundry technician.
+Analyze this garment intake item and provide optimal machine instructions:
+- Garment Type: ${input.clothing_type}
+- Fabric Material: ${input.fabric_type}
+- Color Sorting: ${input.color_category}
+- Stains Present: ${input.has_stains ? 'Yes - ' + (input.stain_description || 'surface stains') : 'No'}
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "wash_program": "delicate" | "normal" | "heavy_duty" | "hand_wash",
+  "water_temp": "cold" | "warm" | "hot",
+  "special_handling": ["mesh_bag", "no_bleach", "flat_dry", "inside_out", "stain_pretreat"],
+  "notes": "1-2 sentence technician care instruction"
+}`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      }),
+      signal: AbortSignal.timeout(4500),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(rawText);
+        return {
+          wash_program: parsed.wash_program || 'normal',
+          water_temp: parsed.water_temp || 'warm',
+          special_handling: Array.isArray(parsed.special_handling) ? parsed.special_handling : [],
+          confidence: 'ai_evaluated',
+          notes: parsed.notes || 'AI evaluated wash cycle.',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Gemini AI wash care fallback:', err);
+  }
+
+  return getWashRecommendation(input);
+}
+

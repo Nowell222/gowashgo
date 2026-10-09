@@ -52,15 +52,10 @@ export default function StaffOrdersPage() {
   }, []);
 
   async function handleStatusChange(orderId: string, targetStatus: OrderStatus) {
-    const orderToAdvance = orders.find((o) => o.id === orderId);
-    if (orderToAdvance && orderToAdvance.status === 'at_facility' && targetStatus === 'washing') {
-      setIntakeOrder(orderToAdvance);
-      return;
-    }
-
     setUpdating(true);
     setActionError('');
     try {
+
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

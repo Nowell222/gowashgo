@@ -10,9 +10,9 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   rider_assigned: ['pickup_en_route', 'cancelled'],
   pickup_en_route: ['picked_up', 'cancelled'],
   picked_up: ['at_facility', 'cancelled'],
-  at_facility: ['washing', 'cancelled'],
-  washing: ['drying', 'cancelled'],
-  drying: ['folding', 'cancelled'],
+  at_facility: ['washing', 'ready_for_delivery', 'cancelled'],
+  washing: ['drying', 'ready_for_delivery', 'cancelled'],
+  drying: ['folding', 'ready_for_delivery', 'cancelled'],
   folding: ['ready_for_delivery', 'cancelled'],
   ready_for_delivery: ['delivery_en_route', 'cancelled'],
   delivery_en_route: ['delivered'],
@@ -37,10 +37,13 @@ const TRANSITION_PERMISSIONS: Record<string, UserRole[]> = {
   'picked_up->at_facility': ['rider', 'staff', 'branch_manager'],
   'picked_up->cancelled': ['staff', 'branch_manager'],
   'at_facility->washing': ['staff', 'branch_manager'],
+  'at_facility->ready_for_delivery': ['staff', 'branch_manager'],
   'at_facility->cancelled': ['staff', 'branch_manager'],
   'washing->drying': ['staff', 'branch_manager'],
+  'washing->ready_for_delivery': ['staff', 'branch_manager'],
   'washing->cancelled': ['staff', 'branch_manager'],
   'drying->folding': ['staff', 'branch_manager'],
+  'drying->ready_for_delivery': ['staff', 'branch_manager'],
   'drying->cancelled': ['staff', 'branch_manager'],
   'folding->ready_for_delivery': ['staff', 'branch_manager'],
   'folding->cancelled': ['staff', 'branch_manager'],
@@ -49,6 +52,7 @@ const TRANSITION_PERMISSIONS: Record<string, UserRole[]> = {
   'delivery_en_route->delivered': ['rider'],
   'delivered->completed': ['staff', 'branch_manager', 'platform_admin'],
 };
+
 
 /**
  * Check if a status transition is valid.

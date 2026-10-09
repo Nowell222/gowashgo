@@ -100,3 +100,65 @@ export async function GET(
     );
   }
 }
+
+/**
+ * PATCH /api/orders/[id]
+ * Allows updating payment_method or notes for an active order
+ */
+export async function PATCH(
+  request: Request,
+  ctx: RouteContext<'/api/orders/[id]'>
+) {
+  try {
+    const { id } = await ctx.params;
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { payment_method, special_instructions } = body;
+
+    const updates: Record<string, any> = {};
+    if (payment_method && ['cod', 'online', 'cash'].includes(payment_method)) {
+      updates.payment_method = payment_method === 'cod' ? 'cash' : payment_method;
+    }
+    if (typeof special_instructions === 'string') {
+      updates.special_instructions = special_instructions;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: { code: 'BAD_REQUEST', message: 'No valid fields provided for update' } },
+        { status: 400 }
+      );
+    }
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !order) {
+      return NextResponse.json(
+        { error: { code: 'UPDATE_FAILED', message: error?.message || 'Failed to update order' } },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ data: order });
+  } catch (err) {
+    console.error('Order detail PATCH error:', err);
+    return NextResponse.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
+      { status: 500 }
+    );
+  }
+}

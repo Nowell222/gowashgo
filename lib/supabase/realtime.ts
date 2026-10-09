@@ -63,22 +63,24 @@ export function useOrderRealtime(
  */
 export function useRiderLocationRealtime(
   orderId: string | null | undefined,
-  onLocationPing: (location: RiderLocation) => void
+  onLocationPing: (location: RiderLocation) => void,
+  riderId?: string | null | undefined
 ) {
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId && !riderId) return;
 
     const supabase = createClient();
+    const filter = riderId ? `rider_id=eq.${riderId}` : `order_id=eq.${orderId}`;
 
     const channel = supabase
-      .channel(`rider_location_${orderId}`)
+      .channel(`rider_location_${riderId || orderId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'rider_locations',
-          filter: `order_id=eq.${orderId}`,
+          filter: filter,
         },
         (payload) => {
           if (payload.new) {
@@ -91,5 +93,5 @@ export function useRiderLocationRealtime(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId, onLocationPing]);
+  }, [orderId, riderId, onLocationPing]);
 }

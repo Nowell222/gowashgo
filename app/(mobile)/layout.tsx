@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { LaundryIcons } from '@/components/common/LaundryIcons';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import '@/styles/mobile-layout.css';
 
@@ -25,10 +26,11 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="mobile-shell">
-      {/* Header */}
+      {/* Header (Flat Linen, Laundry Brand Tag) */}
       <header className="mobile-header">
-        <div className="mobile-header__logo">
-          <span className="gradient-text">WashGo</span>
+        <div className="mobile-header__logo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <LaundryIcons.WaterDrop size={22} color="#0E7490" />
+          <span style={{ color: '#0E7490', fontWeight: 800, letterSpacing: '-0.02em' }}>GoWashGo</span>
         </div>
         <div className="mobile-header__actions">
           <NotificationBell />
@@ -37,8 +39,9 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
             onClick={handleLogout}
             title="Sign out"
             aria-label="Sign out"
+            style={{ color: '#78716C' }}
           >
-            ⏻
+            <LaundryIcons.User size={18} color="#78716C" />
           </button>
         </div>
       </header>
@@ -48,35 +51,43 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
         {children}
       </main>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation (Custom Care-Tag SVG Icons, Zero Emojis) */}
       {isCustomer && (
         <nav className="bottom-nav" aria-label="Customer navigation">
           <Link
             href="/customer"
             className={`bottom-nav__item ${pathname === '/customer' ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">🏠</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.Home size={19} color={pathname === '/customer' ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Home</span>
           </Link>
           <Link
             href="/customer/book"
             className={`bottom-nav__item ${pathname.startsWith('/customer/book') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">➕</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.Plus size={19} color={pathname.startsWith('/customer/book') ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Book</span>
           </Link>
           <Link
             href="/customer/orders"
             className={`bottom-nav__item ${pathname.startsWith('/customer/orders') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">📋</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.ReceiptTicket size={19} color={pathname.startsWith('/customer/orders') ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Orders</span>
           </Link>
           <Link
             href="/customer/profile"
             className={`bottom-nav__item ${pathname.startsWith('/customer/profile') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">👤</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.User size={19} color={pathname.startsWith('/customer/profile') ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Profile</span>
           </Link>
         </nav>
@@ -88,28 +99,36 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
             href="/rider"
             className={`bottom-nav__item ${pathname === '/rider' ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">🏠</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.DeliveryScooter size={20} color={pathname === '/rider' ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Active</span>
           </Link>
           <Link
             href="/rider/orders"
             className={`bottom-nav__item ${pathname.startsWith('/rider/orders') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">📋</span>
-            <span>Orders</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.ReceiptTicket size={19} color={pathname.startsWith('/rider/orders') ? '#0E7490' : '#78716C'} />
+            </span>
+            <span>Feed</span>
           </Link>
           <Link
             href="/rider/history"
             className={`bottom-nav__item ${pathname.startsWith('/rider/history') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">📊</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.History size={19} color={pathname.startsWith('/rider/history') ? '#0E7490' : '#78716C'} />
+            </span>
             <span>History</span>
           </Link>
           <Link
             href="/rider/profile"
             className={`bottom-nav__item ${pathname.startsWith('/rider/profile') ? 'bottom-nav__item--active' : ''}`}
           >
-            <span className="bottom-nav__icon">👤</span>
+            <span className="bottom-nav__icon">
+              <LaundryIcons.User size={19} color={pathname.startsWith('/rider/profile') ? '#0E7490' : '#78716C'} />
+            </span>
             <span>Profile</span>
           </Link>
         </nav>
@@ -117,3 +136,5 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
     </div>
   );
 }
+
+

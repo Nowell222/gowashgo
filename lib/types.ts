@@ -216,7 +216,7 @@ export interface WashRecommendation {
   wash_program: 'normal' | 'delicate' | 'heavy_duty' | 'hand_wash' | 'dry_clean_only';
   water_temp: 'cold' | 'warm' | 'hot';
   special_handling: string[];
-  confidence: 'rule_based';
+  confidence: 'rule_based' | 'ai_evaluated';
   notes: string;
 }
 

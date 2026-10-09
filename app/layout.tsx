@@ -24,12 +24,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0F0F1A',
+  themeColor: '#FAF8F5',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
 };
+
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (

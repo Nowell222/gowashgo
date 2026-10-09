@@ -3,10 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { formatPeso } from '@/lib/utils/currency';
+import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
+import LaundryIcons from '@/components/common/LaundryIcons';
 import type { User, Order } from '@/lib/types';
 
 export default function CustomerHomePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,11 +28,19 @@ export default function CustomerHomePage() {
 
         const { data: orders } = await supabase
           .from('orders')
-          .select('*')
+          .select('*, branch:branches(name, price_per_kg)')
           .eq('customer_id', authUser.id)
           .order('created_at', { ascending: false })
-          .limit(3);
-        if (orders) setRecentOrders(orders as Order[]);
+          .limit(5);
+
+        if (orders && orders.length > 0) {
+          // Check for active order
+          const active = orders.find((o) => !['delivered', 'completed', 'cancelled'].includes(o.status));
+          if (active) {
+            setActiveOrder(active as Order);
+          }
+          setRecentOrders(orders as Order[]);
+        }
       }
       setLoading(false);
     }
@@ -44,135 +56,286 @@ export default function CustomerHomePage() {
 
   if (loading) {
     return (
-      <div className="fade-in">
-        <div className="skeleton" style={{ height: 24, width: 200, marginBottom: 'var(--space-2)' }} />
-        <div className="skeleton" style={{ height: 16, width: 280, marginBottom: 'var(--space-8)' }} />
-        <div className="skeleton" style={{ height: 140, borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }} />
-        <div className="skeleton" style={{ height: 80, borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-3)' }} />
-        <div className="skeleton" style={{ height: 80, borderRadius: 'var(--radius-lg)' }} />
+      <div className="fade-in" style={{ padding: '16px 0' }}>
+        <div style={{ height: 28, width: 180, background: '#F3EFE6', borderRadius: 8, marginBottom: 12 }} />
+        <div style={{ height: 160, background: '#F3EFE6', borderRadius: 16, marginBottom: 16 }} />
+        <div style={{ height: 90, background: '#F3EFE6', borderRadius: 16 }} />
       </div>
     );
   }
 
   return (
-    <div className="fade-in">
-      {/* Greeting */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
-          {greeting()}, {user?.full_name?.split(' ')[0]} 👋
+    <div className="fade-in" style={{ paddingBottom: 48 }}>
+      {/* Header Greeting */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <LaundryIcons.Sparkles size={16} color="var(--color-primary)" />
+          <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-primary)' }}>
+            Linen & Garment Care
+          </span>
+        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: 'var(--color-text-dark)', letterSpacing: '-0.02em' }}>
+          {greeting()}, {user?.full_name?.split(' ')[0] || 'Friend'}
         </h1>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-1)' }}>
-          Need your laundry done? We&apos;ve got you covered.
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 13, margin: '4px 0 0' }}>
+          Doorstep laundry weighed and priced instantly.
         </p>
       </div>
 
-      {/* Quick Book CTA */}
+      {/* ========================================================================= */}
+      {/* ACTIVE ORDER SPOTLIGHT TICKET (If there's an active pickup/wash)          */}
+      {/* ========================================================================= */}
+      {activeOrder && (
+        <div
+          className="spotlight-ticket"
+          style={{
+            background: '#0E7490',
+            color: '#FFFFFF',
+            borderRadius: 18,
+            padding: '18px 20px',
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.9, fontWeight: 800 }}>
+              Active Order In Progress
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 800, background: 'rgba(255, 255, 255, 0.2)', padding: '2px 8px', borderRadius: 6 }}>
+              {formatOrderStatus(activeOrder.status)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              marginBottom: 14,
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.9, fontSize: 11, fontWeight: 700 }}>
+                <LaundryIcons.Scale size={14} color="#A5F3FC" />
+                <span>Verified Weight</span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 800, marginTop: 4 }}>
+                {activeOrder.weight_kg ? `${Number(activeOrder.weight_kg).toFixed(1)} kg` : '-- kg'}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>
+                {activeOrder.weight_kg ? 'Rider Scale Verified' : 'Awaiting Doorstep Scale'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.9, fontSize: 11, fontWeight: 700 }}>
+                <LaundryIcons.ReceiptTicket size={14} color="#FEF08A" />
+                <span>Total Amount</span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 800, marginTop: 4, color: '#FEF08A' }}>
+                {formatPeso(activeOrder.total)}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>
+                {activeOrder.payment_method === 'online' ? 'Online (GCash/Maya)' : 'Cash on Delivery'}
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href={`/customer/orders/${activeOrder.id}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#D97706',
+              color: '#FFFFFF',
+              textDecoration: 'none',
+              padding: '10px 14px',
+              borderRadius: 10,
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <LaundryIcons.DeliveryScooter size={16} color="#FFFFFF" />
+              <span>Track Live Order & Details</span>
+            </span>
+            <LaundryIcons.ArrowRight size={14} color="#FFFFFF" />
+          </Link>
+        </div>
+      )}
+
+      {/* Schedule a Pickup CTA Button */}
       <Link
         href="/customer/book"
-        className="card card--interactive"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--space-4)',
-          marginBottom: 'var(--space-6)',
-          background: 'linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(0, 210, 211, 0.1))',
-          border: '1px solid rgba(108, 92, 231, 0.2)',
+          gap: 14,
+          marginBottom: 24,
+          background: '#F3EFE6',
+          borderRadius: 16,
+          padding: 16,
           textDecoration: 'none',
         }}
       >
-        <div style={{
-          width: 48, height: 48, borderRadius: 'var(--radius-md)',
-          background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 'var(--text-xl)', flexShrink: 0,
-        }}>
-          🧺
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: 'var(--color-primary)',
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <LaundryIcons.Basket size={24} color="#FFFFFF" />
         </div>
-        <div>
-          <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-md)' }}>
-            Schedule a Pickup
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--color-text-dark)' }}>
+            Schedule Laundry Pickup
           </div>
-          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-            We&apos;ll pick up, wash, and deliver back to you
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            Rider brings portable scale to your door
           </div>
         </div>
-        <span style={{ marginLeft: 'auto', color: 'var(--color-primary-light)', fontSize: 'var(--text-xl)' }}>→</span>
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: '#FAF8F5',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--color-primary)',
+          }}
+        >
+          <LaundryIcons.ArrowRight size={16} color="var(--color-primary)" />
+        </div>
       </Link>
 
-      {/* Recent Orders */}
+      {/* Laundry Services Highlight Bar */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
+        <div className="flat-block" style={{ textAlign: 'center', padding: '12px 8px', background: '#F3EFE6' }}>
+          <LaundryIcons.Scale size={20} color="var(--color-primary)" />
+          <div style={{ fontSize: 11, fontWeight: 800, marginTop: 6, color: 'var(--color-text-dark)' }}>
+            Scale Weighing
+          </div>
+          <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            At your doorstep
+          </div>
+        </div>
+
+        <div className="flat-block" style={{ textAlign: 'center', padding: '12px 8px', background: '#F3EFE6' }}>
+          <LaundryIcons.ReceiptTicket size={20} color="var(--color-accent)" />
+          <div style={{ fontSize: 11, fontWeight: 800, marginTop: 6, color: 'var(--color-text-dark)' }}>
+            Instant Pricing
+          </div>
+          <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            Weight × Rate/kg
+          </div>
+        </div>
+
+        <div className="flat-block" style={{ textAlign: 'center', padding: '12px 8px', background: '#F3EFE6' }}>
+          <LaundryIcons.Washer size={20} color="var(--color-primary)" />
+          <div style={{ fontSize: 11, fontWeight: 800, marginTop: 6, color: 'var(--color-text-dark)' }}>
+            Streamlined
+          </div>
+          <div style={{ fontSize: 9, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            Wash, Dry & Fold
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Orders List */}
       <div>
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: 'var(--space-4)',
-        }}>
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
-            Recent Orders
-          </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.CareTag size={16} color="var(--color-primary)" />
+            <h2 style={{ fontSize: 14, fontWeight: 800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Recent Orders
+            </h2>
+          </div>
           {recentOrders.length > 0 && (
-            <Link href="/customer/orders" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary-light)' }}>
-              View all →
+            <Link
+              href="/customer/orders"
+              style={{ fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, textDecoration: 'none' }}
+            >
+              View all
             </Link>
           )}
         </div>
 
         {recentOrders.length === 0 ? (
-          <div className="empty-state" style={{ padding: 'var(--space-8) 0' }}>
-            <div className="empty-state__icon">📋</div>
-            <p className="empty-state__title">No orders yet</p>
-            <p className="empty-state__description">
-              Book your first laundry pickup and we&apos;ll take care of the rest!
+          <div className="flat-block" style={{ textAlign: 'center', padding: '32px 16px', background: '#F3EFE6' }}>
+            <LaundryIcons.Basket size={32} color="#8C827A" />
+            <p style={{ fontWeight: 800, fontSize: 14, margin: '8px 0 2px' }}>No laundry orders yet</p>
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: 0 }}>
+              Book your first doorstep laundry pickup today!
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {recentOrders.map((order) => (
-              <Link
-                key={order.id}
-                href={`/customer/orders/${order.id}`}
-                className="card card--interactive"
-                style={{ textDecoration: 'none' }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {recentOrders.map((ord) => {
+              const statusColor = getOrderStatusColor(ord.status);
+              return (
+                <Link
+                  key={ord.id}
+                  href={`/customer/orders/${ord.id}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#F3EFE6',
+                    borderRadius: 14,
+                    padding: '12px 16px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                  }}
+                >
                   <div>
-                    <div style={{ fontWeight: 'var(--font-semibold)', fontSize: 'var(--text-sm)' }}>
-                      {order.order_number}
+                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: 'var(--color-text-dark)' }}>
+                      {ord.order_number}
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                      {new Date(order.created_at).toLocaleDateString('en-PH', {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                      })}
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                      {new Date(ord.created_at).toLocaleDateString('en-PH', {
+                        month: 'short',
+                        day: 'numeric',
+                      })}{' '}
+                      • {ord.weight_kg ? `${ord.weight_kg} kg` : 'Pending scale'}
                     </div>
                   </div>
-                  <span className={`status-badge status-badge--${getStatusColor(order.status)}`}>
-                    {formatStatus(order.status)}
-                  </span>
-                </div>
-                <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
-                  ₱{(order.total / 100).toFixed(2)}
-                </div>
-              </Link>
-            ))}
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 14, color: 'var(--color-text-dark)' }}>
+                      {formatPeso(ord.total)}
+                    </div>
+                    <span
+                      className={`status-badge status-badge--${statusColor}`}
+                      style={{ fontSize: 10, padding: '2px 8px', marginTop: 4, display: 'inline-block' }}
+                    >
+                      {formatOrderStatus(ord.status)}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'delivered':
-    case 'completed':
-      return 'success';
-    case 'cancelled':
-      return 'error';
-    case 'pending':
-      return 'neutral';
-    default:
-      return 'info';
-  }
-}
-
-function formatStatus(status: string): string {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
