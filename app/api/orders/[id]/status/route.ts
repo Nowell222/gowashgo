@@ -113,6 +113,14 @@ export async function PATCH(
 
     const currentStatus = order.status as OrderStatus;
 
+    // Idempotent duplicate check: If already in requested status, return early successfully
+    if (currentStatus === (targetStatus as OrderStatus)) {
+      return NextResponse.json({
+        data: order,
+        message: `Order is already in status '${targetStatus}'`,
+      });
+    }
+
     // Check status transition validity for this role
     if (!canPerformTransition(currentStatus, targetStatus as OrderStatus, role)) {
       return NextResponse.json(
