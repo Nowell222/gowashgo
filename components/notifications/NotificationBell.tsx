@@ -169,21 +169,8 @@ export default function NotificationBell() {
       {/* Notification Dropdown Drawer */}
       {isOpen && (
         <div
-          className="fade-in"
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: 340,
-            maxHeight: 440,
-            overflowY: 'auto',
-            zIndex: varZIndex(),
-            padding: 'var(--space-3)',
-            boxShadow: '0 12px 36px -4px rgba(14, 165, 233, 0.18), 0 4px 12px rgba(0,0,0,0.06)',
-            background: '#FFFFFF',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid #E2E8F0',
-          }}
+          className="notification-dropdown fade-in"
+          style={{ zIndex: varZIndex() }}
         >
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid #F1F5F9' }}>

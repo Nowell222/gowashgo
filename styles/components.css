@@ -490,3 +490,28 @@
   height: 1px;
   background: var(--color-border);
 }
+
+/* ---------- Notification Dropdown ---------- */
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -52px;
+  width: 320px;
+  max-width: calc(100vw - 28px);
+  max-height: 440px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 14px;
+  box-shadow: 0 16px 40px -6px rgba(14, 165, 233, 0.22), 0 4px 14px rgba(0, 0, 0, 0.08);
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+}
+
+@media (min-width: 640px) {
+  .notification-dropdown {
+    right: 0;
+    width: 350px;
+  }
+}
+
