@@ -9,6 +9,24 @@ interface ChatMessage {
   content: string;
 }
 
+function sanitizeChatOutput(text: string): string {
+  if (!text) return '';
+  return text
+    // Replace markdown bold/italic asterisks: **word** -> word, *word* -> word
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*\n]+)\*/g, '$1')
+    // Convert nested sub-bullets (e.g. "  * " or "  - ") into clean 3-space indentation
+    .replace(/^[ \t]{2,}[*-][ \t]*/gm, '   ')
+    // Convert top-level bullets ("* " or "- ") into clean unindented line
+    .replace(/^[ \t]*[*-][ \t]*/gm, '')
+    // Remove any remaining stray asterisks
+    .replace(/\*/g, '')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -54,7 +72,7 @@ export async function POST(request: Request) {
           ordersSummary = orders.map((o: any) => {
             const riderInfo = o.rider ? `Rider: ${o.rider.full_name} (${o.rider.phone || 'No phone'})` : 'Rider: Not yet assigned';
             const weightInfo = o.weight_kg ? `Weighed: ${o.weight_kg} kg` : 'Doorstep weighing pending';
-            return `- Order #${o.order_number}: Status is "${formatOrderStatus(o.status as OrderStatus)}" (code: ${o.status}). Total: ${formatPeso(o.total)}. ${weightInfo}. Payment: ${o.payment_method?.toUpperCase()} (${o.cash_collected ? 'Cash Collected' : 'Pending'}). ${riderInfo}. Branch: ${o.branch?.name || 'Local Hub'}.`;
+            return `Order #${o.order_number}\n   Status: ${formatOrderStatus(o.status as OrderStatus)} (code: ${o.status})\n   Total: ${formatPeso(o.total)}\n   ${weightInfo}\n   Payment: ${o.payment_method?.toUpperCase()} (${o.cash_collected ? 'Cash Collected' : 'Pending'})\n   ${riderInfo}\n   Branch: ${o.branch?.name || 'Local Hub'}\n`;
           }).join('\n');
         }
 
@@ -85,9 +103,16 @@ ${customerContext}
    - Give expert, practical, safe advice for fabric care (cotton, silk, wool, linen, denim) and stain removal (coffee, oil, ink, red wine, sweat).
    - Emphasize commercial pre-treatment and gentle drying techniques.
 
-TONE & STYLE:
+STRICT FORMATTING & STYLE RULES:
+- NO ASTERISKS: NEVER use asterisks (*) anywhere in your reply. Do NOT use asterisks for bolding (e.g., never write **word**) and do NOT use asterisks for bullet lists (e.g., never write * item).
+- PROPER INDENTATION: Structure orders, commands, or multi-step lists cleanly using 3 to 4 spaces of indentation for nested properties.
+- Example clean layout:
+  Order #WG-20261009-0748
+     Status: Pickup En Route 🛵
+     Total: ₱50.00 (Doorstep weighing pending)
+     Payment: Online (Pending)
+
 - Friendly, warm, polite, and helpful (Filipino hospitality).
-- Clear, concise formatting (use bullet points or bold highlights when explaining steps).
 - If the user greets or speaks in Taglish or Filipino (e.g. "Kumusta", "Saan na order ko?"), respond naturally in warm English with friendly Filipino courtesy (e.g., "Opo", "Mabuhay!", "Salamat!").
 - Keep responses concise and easy to read on mobile screens (under 120 words unless answering a complex stain inquiry).`;
 
@@ -103,14 +128,14 @@ TONE & STYLE:
           ? `Here is your latest order status:\n\n${customerContext.split('Active/Recent Customer Orders:\n')[1] || 'Your order is currently being processed.'}\n\nYou can track live GPS rider movement anytime on your Orders tab!`
           : "You don't have an active order right now. You can book a doorstep scale pickup anytime by tapping the '+' Book tab below!";
       } else if (lower.includes('price') || lower.includes('cost') || lower.includes('rate') || lower.includes('magkano')) {
-        cannedResponse = "GoWashGo uses instant doorstep scale pricing!\n\n• Base Wash, Dry & Fold: ₱35.00 / kg\n• Flat Delivery Fee: ₱50.00\n\nOur rider weighs your laundry at your door with a certified hanging scale, and your exact total computes on your phone instantly!";
+        cannedResponse = "GoWashGo uses instant doorstep scale pricing!\n\n   Base Wash, Dry & Fold: ₱35.00 / kg\n   Flat Delivery Fee: ₱50.00\n\nOur rider weighs your laundry at your door with a certified hanging scale, and your exact total computes on your phone instantly!";
       } else if (lower.includes('gcash') || lower.includes('maya') || lower.includes('payment') || lower.includes('pay') || lower.includes('cod')) {
-        cannedResponse = "We accept:\n• GCash & Maya (instant mobile e-wallet)\n• Credit / Debit Cards (Visa, Mastercard)\n• Cash on Delivery (COD) upon laundry handover\n\nYou can switch between Online and Cash anytime before delivery!";
+        cannedResponse = "We accept:\n   GCash & Maya (instant mobile e-wallet)\n   Credit / Debit Cards (Visa, Mastercard)\n   Cash on Delivery (COD) upon laundry handover\n\nYou can switch between Online and Cash anytime before delivery!";
       } else if (lower.includes('stain') || lower.includes('wine') || lower.includes('coffee') || lower.includes('oil')) {
         cannedResponse = "For tough stains (coffee, wine, oil):\n1. Blot immediately with a damp towel (never rub, which sets the stain into fibers).\n2. When booking, select the 'Visible Stains' tag so our hub staff applies commercial enzyme pre-treatment before washing!";
       }
 
-      return NextResponse.json({ reply: cannedResponse });
+      return NextResponse.json({ reply: sanitizeChatOutput(cannedResponse) });
     }
 
     // 4. Call Google Gemini API (gemini-3.5-flash-lite / gemini-3.5-flash / gemini-3.8-flash)
@@ -179,7 +204,7 @@ TONE & STYLE:
       }
     }
 
-    return NextResponse.json({ reply: rawReply });
+    return NextResponse.json({ reply: sanitizeChatOutput(rawReply) });
   } catch (err: any) {
     console.error('Chat endpoint error:', err);
     return NextResponse.json({
