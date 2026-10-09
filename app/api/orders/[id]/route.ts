@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import type { UserRole } from '@/lib/types';
 
 /**
@@ -139,7 +139,37 @@ export async function PATCH(
       );
     }
 
-    const { data: order, error } = await supabase
+    const serviceClient = createServiceClient();
+    const { data: existingOrder } = await serviceClient
+      .from('orders')
+      .select('customer_id, rider_id, branch_id')
+      .eq('id', id)
+      .single();
+
+    if (!existingOrder) {
+      return NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Order not found' } },
+        { status: 404 }
+      );
+    }
+
+    const { data: profile } = await serviceClient
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const isCustomerOwner = existingOrder.customer_id === user.id;
+    const isStaffOrAdmin = profile && ['staff', 'branch_manager', 'platform_admin', 'rider'].includes(profile.role);
+
+    if (!isCustomerOwner && !isStaffOrAdmin) {
+      return NextResponse.json(
+        { error: { code: 'FORBIDDEN', message: 'Access denied' } },
+        { status: 403 }
+      );
+    }
+
+    const { data: order, error } = await serviceClient
       .from('orders')
       .update(updates)
       .eq('id', id)
