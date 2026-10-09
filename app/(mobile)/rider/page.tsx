@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
@@ -29,6 +30,11 @@ export default function RiderHomePage() {
 
   // In-app Alert / Dialog Modal state
   const [systemAlert, setSystemAlert] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   async function loadActiveOrder() {
     try {
@@ -36,7 +42,7 @@ export default function RiderHomePage() {
       const json = await res.json();
       if (json.data && Array.isArray(json.data)) {
         const assigned = json.data.filter((o: OrderWithDetails) =>
-          ['rider_assigned', 'pickup_en_route', 'picked_up', 'ready_for_delivery', 'delivery_en_route'].includes(o.status)
+          ['pending', 'confirmed', 'rider_assigned', 'pickup_en_route', 'picked_up', 'ready_for_delivery', 'delivery_en_route'].includes(o.status)
         );
         setActiveOrder((prev) => {
           const current = prev ? assigned.find((o: OrderWithDetails) => o.id === prev.id) || assigned[0] : assigned[0];
@@ -548,27 +554,88 @@ export default function RiderHomePage() {
       )}
 
       {/* ================= IN-APP DOORSTEP SCALE WEIGH-IN MODAL (PICKUP) ================= */}
-      {isPickupModalOpen && activeOrder && (
-        <div className="modal-backdrop" onClick={() => setIsPickupModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
+      {isMounted && isPickupModalOpen && activeOrder && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => setIsPickupModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#FAF8F5',
+              borderRadius: '24px 24px 0 0',
+              width: '100%',
+              maxWidth: 440,
+              maxHeight: '88dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.3)',
+              animation: 'slideUp 200ms ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 1. Header (Sticky) */}
+            <div
+              style={{
+                padding: '14px 18px',
+                background: '#FAF8F5',
+                borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+            >
               <div>
-                <h2 className="modal__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <LaundryIcons.Scale size={20} color="#0E7490" />
+                <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--color-text-dark)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <LaundryIcons.Scale size={18} color="#0E7490" />
                   Doorstep Scale Weigh-in
                 </h2>
-                <div style={{ fontSize: 12, color: '#78716C', fontFamily: 'var(--font-mono)' }}>Order {activeOrder.order_number}</div>
+                <div style={{ fontSize: 11, color: '#78716C', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                  Order {activeOrder.order_number}
+                </div>
               </div>
-              <button className="modal__close" onClick={() => setIsPickupModalOpen(false)}>✕</button>
+              <button
+                onClick={() => setIsPickupModalOpen(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: '#E7E2D8',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#44403C',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* 2. Scrollable Body */}
+            <div style={{ padding: '16px 18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Order Verification Notice */}
-              <div className="flat-block flat-block--teal" style={{ padding: '12px 14px', marginBottom: 0 }}>
+              <div className="flat-block flat-block--teal" style={{ padding: '10px 14px', marginBottom: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Customer Order Verification
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginTop: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#1C1917', marginTop: 2 }}>
                   Order: <span style={{ fontFamily: 'var(--font-mono)', color: '#0E7490' }}>{activeOrder.order_number}</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#57534E', marginTop: 2 }}>
@@ -644,45 +711,119 @@ export default function RiderHomePage() {
                   disabled={updating}
                 />
               </div>
+            </div>
 
-              {/* Confirm Pickup Button */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button
-                  type="button"
-                  className="btn btn--secondary"
-                  style={{ flex: 1 }}
-                  onClick={() => setIsPickupModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ flex: 2, background: '#0E7490' }}
-                  disabled={updating || !pickupProofUrl || parsedScaleWeight <= 0}
-                  onClick={handleConfirmPickup}
-                >
-                  {updating ? <span className="btn__spinner" /> : `Confirm ${parsedScaleWeight.toFixed(1)}kg (${formatPeso(liveComputedTotal)}) ✓`}
-                </button>
-              </div>
+            {/* 3. Sticky Bottom Action Bar */}
+            <div
+              style={{
+                padding: '12px 18px',
+                background: '#FAF8F5',
+                borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                gap: 10,
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn--secondary"
+                style={{ flex: 1, padding: '12px' }}
+                onClick={() => setIsPickupModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                style={{ flex: 2, background: '#0E7490', padding: '12px', fontWeight: 800 }}
+                disabled={updating || !pickupProofUrl || parsedScaleWeight <= 0}
+                onClick={handleConfirmPickup}
+              >
+                {updating ? <span className="btn__spinner" /> : `Confirm ${parsedScaleWeight.toFixed(1)}kg (${formatPeso(liveComputedTotal)}) ✓`}
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================= IN-APP HANDOVER & COMPLETION MODAL ================= */}
-      {isHandoverOpen && activeOrder && (
-        <div className="modal-backdrop" onClick={() => setIsHandoverOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal__header">
+      {isMounted && isHandoverOpen && activeOrder && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => setIsHandoverOpen(false)}
+        >
+          <div
+            style={{
+              background: '#FAF8F5',
+              borderRadius: '24px 24px 0 0',
+              width: '100%',
+              maxWidth: 440,
+              maxHeight: '88dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.3)',
+              animation: 'slideUp 200ms ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 1. Header (Sticky) */}
+            <div
+              style={{
+                padding: '14px 18px',
+                background: '#FAF8F5',
+                borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexShrink: 0,
+              }}
+            >
               <div>
-                <h2 className="modal__title">Delivery Handover</h2>
-                <div style={{ fontSize: 12, color: '#78716C', fontFamily: 'var(--font-mono)' }}>Order {activeOrder.order_number}</div>
+                <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--color-text-dark)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <LaundryIcons.DeliveryScooter size={18} color="#0E7490" />
+                  Delivery Handover
+                </h2>
+                <div style={{ fontSize: 11, color: '#78716C', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                  Order {activeOrder.order_number}
+                </div>
               </div>
-              <button className="modal__close" onClick={() => setIsHandoverOpen(false)}>✕</button>
+              <button
+                onClick={() => setIsHandoverOpen(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: '#E7E2D8',
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#44403C',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* 2. Scrollable Body */}
+            <div style={{ padding: '16px 18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Payment Status Card */}
               {activeOrder.payment_method === 'cash' ? (
                 <div className="flat-block flat-block--amber" style={{ padding: '14px', marginBottom: 0 }}>
@@ -734,36 +875,73 @@ export default function RiderHomePage() {
                   disabled={updating}
                 />
               </div>
+            </div>
 
-              {/* Confirm Completion Button */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button
-                  type="button"
-                  className="btn btn--secondary"
-                  style={{ flex: 1 }}
-                  onClick={() => setIsHandoverOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ flex: 2 }}
-                  disabled={updating || (activeOrder.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl}
-                  onClick={handleConfirmHandover}
-                >
-                  {updating ? <span className="btn__spinner" /> : 'Confirm & Complete ✓'}
-                </button>
-              </div>
+            {/* 3. Sticky Bottom Action Bar */}
+            <div
+              style={{
+                padding: '12px 18px',
+                background: '#FAF8F5',
+                borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                gap: 10,
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn--secondary"
+                style={{ flex: 1, padding: '12px' }}
+                onClick={() => setIsHandoverOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                style={{ flex: 2, padding: '12px', fontWeight: 800 }}
+                disabled={updating || (activeOrder.payment_method === 'cash' && !cashCollected) || !deliveryProofUrl}
+                onClick={handleConfirmHandover}
+              >
+                {updating ? <span className="btn__spinner" /> : 'Confirm & Complete ✓'}
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================= IN-APP SYSTEM ALERT DIALOG ================= */}
-      {systemAlert && (
-        <div className="modal-backdrop" onClick={() => setSystemAlert(null)}>
-          <div className="modal" style={{ maxWidth: 380, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+      {isMounted && systemAlert && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100dvh',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setSystemAlert(null)}
+        >
+          <div
+            style={{
+              background: '#FAF8F5',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 360,
+              padding: 24,
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{
               width: 48,
               height: 48,
@@ -790,7 +968,8 @@ export default function RiderHomePage() {
               Understood
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     if (role === 'customer') {
       query = query.eq('customer_id', user.id);
     } else if (role === 'rider') {
-      query = query.eq('rider_id', user.id);
+      query = query.or(`rider_id.eq.${user.id},rider_id.is.null`);
     } else if (role === 'staff' || role === 'branch_manager') {
       if (profile.branch_id) {
         query = query.eq('branch_id', profile.branch_id);
@@ -219,8 +219,18 @@ export async function POST(request: Request) {
     // 5. Generate Order Number
     const orderNumber = generateOrderNumber();
 
-    // 6. Use Service Client to insert order
+    // 6. Use Service Client to insert order and auto-dispatch to branch rider
     const serviceClient = createServiceClient();
+
+    const { data: branchRiders } = await serviceClient
+      .from('users')
+      .select('id')
+      .eq('role', 'rider')
+      .eq('branch_id', branch.id)
+      .eq('is_active', true)
+      .limit(1);
+
+    const assignedRiderId = branchRiders?.[0]?.id || 'a0000000-0000-0000-0000-000000000004';
 
     const { data: newOrder, error: orderInsertError } = await serviceClient
       .from('orders')
@@ -228,8 +238,8 @@ export async function POST(request: Request) {
         order_number: orderNumber,
         customer_id: user.id,
         branch_id: branch.id,
-        rider_id: null,
-        status: 'pending',
+        rider_id: assignedRiderId,
+        status: 'rider_assigned',
         payment_method: data.payment_method || 'online',
         weight_kg: null,
         cash_collected: false,
