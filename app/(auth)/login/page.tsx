@@ -141,6 +141,44 @@ function LoginForm() {
           {loading ? <span className="btn__spinner" /> : 'Sign In'}
         </button>
       </form>
+
+      <div style={{ marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)', borderTop: '1px dashed #cbd5e1' }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '8px', textAlign: 'center' }}>
+          Quick Demo Accounts (Password: Password123!)
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+          {[
+            { label: 'Customer', email: 'customer@washgo.ph' },
+            { label: 'Rider', email: 'rider@washgo.ph' },
+            { label: 'Staff', email: 'staff@washgo.ph' },
+            { label: 'Manager', email: 'manager@washgo.ph' },
+            { label: 'Admin', email: 'admin@washgo.ph' },
+          ].map((acc) => (
+            <button
+              key={acc.email}
+              type="button"
+              onClick={() => {
+                setFormData({ email: acc.email, password: 'Password123!' });
+                setErrors({});
+                setGlobalError('');
+              }}
+              style={{
+                padding: '6px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: formData.email === acc.email ? '#e0f2fe' : '#f8fafc',
+                color: formData.email === acc.email ? '#0369a1' : '#334155',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {acc.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
