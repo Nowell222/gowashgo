@@ -333,7 +333,7 @@ export async function PATCH(
     const branchName = Array.isArray(order.branch) ? order.branch[0]?.name : (order.branch as any)?.name;
     const riderName = Array.isArray(order.rider) ? order.rider[0]?.full_name : (order.rider as any)?.full_name;
 
-    dispatchOrderStatusNotification({
+    await dispatchOrderStatusNotification({
       orderId: id,
       orderNumber: order.order_number,
       status: targetStatus,

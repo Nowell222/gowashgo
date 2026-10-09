@@ -145,39 +145,66 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
 
   // Trigger transactional pickup confirmation email via Brevo / SMTP
   if (status === 'picked_up') {
-    (async () => {
-      try {
-        const { sendPickupConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
-        const serviceClient = createServiceClient();
-        const { data: customer } = await serviceClient
-          .from('users')
-          .select('email, full_name')
-          .eq('id', customerId)
-          .single();
+    try {
+      const { sendPickupConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+      const serviceClient = createServiceClient();
+      
+      const { data: customer } = await serviceClient
+        .from('users')
+        .select('email, full_name')
+        .eq('id', customerId)
+        .single();
 
-        const { data: orderDetails } = await serviceClient
-          .from('orders')
-          .select('pickup_address, weight_kg, total')
-          .eq('id', orderId)
-          .single();
+      let recipientEmail = customer?.email;
+      let recipientName = customer?.full_name;
 
-        if (customer?.email) {
-          const appUrl = getAppBaseUrl();
-          const trackingUrl = `${appUrl}/customer/orders/${orderId}`;
-          await sendPickupConfirmationEmail({
-            customerName: customer.full_name || 'Valued Customer',
-            orderNumber,
-            weightKg: orderDetails?.weight_kg || null,
-            totalCentavos: orderDetails?.total || null,
-            riderName: riderName || 'GoWashGo Rider',
-            pickupAddress: orderDetails?.pickup_address || 'Customer doorstep',
-            trackingUrl,
-          }, customer.email);
+      // If email is not in public.users, query Supabase auth.users directly
+      if (!recipientEmail) {
+        try {
+          const { data: authUserData } = await serviceClient.auth.admin.getUserById(customerId);
+          if (authUserData?.user?.email) {
+            recipientEmail = authUserData.user.email;
+            recipientName = recipientName || (authUserData.user.user_metadata as any)?.full_name || 'Valued Customer';
+
+            // Self-heal: ensure the user exists in public.users
+            await serviceClient.from('users').upsert({
+              id: customerId,
+              email: recipientEmail,
+              full_name: recipientName,
+              role: 'customer',
+            });
+          }
+        } catch (authErr) {
+          console.warn('[Dispatcher] Could not fetch auth user for customer:', authErr);
         }
-      } catch (emailErr) {
-        console.error('[Dispatcher] Failed to send pickup confirmation email:', emailErr);
       }
-    })();
+
+      const { data: orderDetails } = await serviceClient
+        .from('orders')
+        .select('pickup_address, weight_kg, total')
+        .eq('id', orderId)
+        .single();
+
+      if (recipientEmail) {
+        const appUrl = getAppBaseUrl();
+        const trackingUrl = `${appUrl}/customer/orders/${orderId}`;
+        const sendResult = await sendPickupConfirmationEmail({
+          customerName: recipientName || 'Valued Customer',
+          orderNumber,
+          weightKg: orderDetails?.weight_kg || null,
+          totalCentavos: orderDetails?.total || null,
+          riderName: riderName || 'GoWashGo Rider',
+          pickupAddress: orderDetails?.pickup_address || 'Customer doorstep',
+          trackingUrl,
+        }, recipientEmail);
+
+        console.log(`[Dispatcher] Pickup confirmation email sent to ${recipientEmail} (Order ${orderNumber}):`, sendResult);
+      } else {
+        console.warn(`[Dispatcher] No recipient email found for customer ${customerId} on order ${orderNumber}`);
+      }
+    } catch (emailErr) {
+      console.error('[Dispatcher] Failed to send pickup confirmation email:', emailErr);
+    }
   }
 
   return dispatchNotification({

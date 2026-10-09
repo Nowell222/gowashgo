@@ -178,7 +178,18 @@ export default function EditorialAuthView({ initialTab = 'signin' }: EditorialAu
       });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        console.warn('Client profile creation failed, syncing via server API:', profileError);
+        await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: data.user.id,
+            email: registerData.email,
+            phone: registerData.phone || null,
+            full_name: registerData.full_name,
+            role: 'customer',
+          }),
+        }).catch(() => {});
       }
 
       router.push('/customer');

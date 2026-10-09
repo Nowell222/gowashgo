@@ -129,23 +129,21 @@ export async function POST(request: Request) {
     // Send transactional receipt email via Brevo / SMTP if paid online
     const recipientEmail = user.email;
     if (isPaid && recipientEmail) {
-      (async () => {
-        try {
-          const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
-          const appUrl = getAppBaseUrl(request);
-          const receiptUrl = `${appUrl}/customer/orders/${order.id}`;
-          await sendPaymentConfirmationEmail({
-            customerName: user.user_metadata?.full_name || recipientEmail.split('@')[0],
-            orderNumber: order.order_number,
-            amountCentavos: order.total,
-            paymentMethod: payment_method.toUpperCase(),
-            paidAt: new Date().toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-            receiptUrl,
-          }, recipientEmail);
-        } catch (emailErr) {
-          console.error('[PaymentConfirm] Failed to send receipt email:', emailErr);
-        }
-      })();
+      try {
+        const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+        const appUrl = getAppBaseUrl(request);
+        const receiptUrl = `${appUrl}/customer/orders/${order.id}`;
+        await sendPaymentConfirmationEmail({
+          customerName: user.user_metadata?.full_name || recipientEmail.split('@')[0],
+          orderNumber: order.order_number,
+          amountCentavos: order.total,
+          paymentMethod: payment_method.toUpperCase(),
+          paidAt: new Date().toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          receiptUrl,
+        }, recipientEmail);
+      } catch (emailErr) {
+        console.error('[PaymentConfirm] Failed to send receipt email:', emailErr);
+      }
     }
 
     return NextResponse.json({

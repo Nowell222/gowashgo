@@ -76,22 +76,20 @@ export async function POST(request: Request) {
             // Send transactional payment confirmation email
             const customerObj = Array.isArray(order.customer) ? order.customer[0] : (order.customer as any);
             if (customerObj?.email) {
-              (async () => {
-                try {
-                  const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
-                  const appUrl = getAppBaseUrl(request);
-                  await sendPaymentConfirmationEmail({
-                    customerName: customerObj.full_name || 'Customer',
-                    orderNumber: order.order_number,
-                    amountCentavos: order.total,
-                    paymentMethod: 'ONLINE (PAYMONGO)',
-                    paidAt: new Date().toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    receiptUrl: `${appUrl}/customer/orders/${orderId}`,
-                  }, customerObj.email);
-                } catch (emailErr) {
-                  console.error('[PayMongo Webhook] Failed to send receipt email:', emailErr);
-                }
-              })();
+              try {
+                const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+                const appUrl = getAppBaseUrl(request);
+                await sendPaymentConfirmationEmail({
+                  customerName: customerObj.full_name || 'Customer',
+                  orderNumber: order.order_number,
+                  amountCentavos: order.total,
+                  paymentMethod: 'ONLINE (PAYMONGO)',
+                  paidAt: new Date().toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                  receiptUrl: `${appUrl}/customer/orders/${orderId}`,
+                }, customerObj.email);
+              } catch (emailErr) {
+                console.error('[PayMongo Webhook] Failed to send receipt email:', emailErr);
+              }
             }
           }
         }
