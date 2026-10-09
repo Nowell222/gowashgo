@@ -204,7 +204,7 @@ export default function AdminDashboardPage() {
                 marginBottom: 6,
               }}
             >
-              LIFETIME REVENUE · GROSS MERCHANDISE VALUE
+              TOTAL AMOUNT PROCESSED · GROSS REVENUE
             </div>
             <div
               style={{
@@ -367,7 +367,7 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Gross Revenue</div>
+                    <div style={{ fontSize: 10, color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Total Amount Processed</div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: '#059669', fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)' }}>
                       {formatPeso(b.revenueCentavos)}
                     </div>

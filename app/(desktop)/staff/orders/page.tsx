@@ -141,6 +141,10 @@ export default function StaffOrdersPage() {
     return o.status === statusFilter;
   });
 
+  const totalAmountProcessed = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalKgProcessed = orders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
+  const activeCount = orders.filter((o) => ['at_facility', 'washing', 'drying', 'folding'].includes(o.status)).length;
+
   return (
     <div className="desktop-content fade-in">
       <div className="page-heading">
@@ -159,6 +163,36 @@ export default function StaffOrdersPage() {
           >
             <ReceiptTicketIcon size={14} /> Download Facility Manifest (PDF)
           </button>
+        </div>
+      </div>
+
+      {/* Stats Grid with Total Amount Processed */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card__label">Total Orders Handled</div>
+          <div className="stat-card__value">{orders.length}</div>
+          <div className="stat-card__hint">Facility orders volume</div>
+        </div>
+        <div className="stat-card stat-card--teal">
+          <div className="stat-card__label">Total Amount Processed</div>
+          <div className="stat-card__value" style={{ color: '#0E7490' }}>
+            {formatPeso(totalAmountProcessed)}
+          </div>
+          <div className="stat-card__hint">Gross value of processed garments</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__label">Active In-Wash Queue</div>
+          <div className="stat-card__value" style={{ color: '#B45309' }}>
+            {activeCount}
+          </div>
+          <div className="stat-card__hint">Sorting, wash, dry, or fold</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__label">Total Weight Handled</div>
+          <div className="stat-card__value">
+            {totalKgProcessed.toFixed(1)} kg
+          </div>
+          <div className="stat-card__hint">Doorstep verified load</div>
         </div>
       </div>
 

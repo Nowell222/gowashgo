@@ -78,7 +78,7 @@ export default function ManagerOrdersPage() {
           <div className="stat-card__value">{orders.length}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__label">Realized Revenue (Completed)</div>
+          <div className="stat-card__label">Total Amount Processed (Realized)</div>
           <div className="stat-card__value" style={{ color: '#059669' }}>{formatPeso(totalRevenue)}</div>
         </div>
         <div className="stat-card">

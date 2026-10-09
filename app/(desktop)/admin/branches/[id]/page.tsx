@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { formatPeso } from '@/lib/utils/currency';
 import { ROLE_LABELS } from '@/lib/auth/roles';
-import { BasketIcon, ScaleIcon, ScooterCourierIcon, CareTagIcon } from '@/components/icons';
+import { BasketIcon, ScaleIcon, ScooterCourierIcon, CareTagIcon, ReceiptTicketIcon } from '@/components/icons';
+import { downloadManagerShiftReport } from '@/lib/reports/pdf-reports';
 import type { Branch, User, Order, UserRole } from '@/lib/types';
 
 export default function AdminBranchDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -79,10 +80,26 @@ export default function AdminBranchDetailPage({ params }: { params: Promise<{ id
           <h1 className="page-heading__title">{branch.name}</h1>
           <p className="page-heading__subtitle">📍 {branch.address}</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span className={`status-badge status-badge--${branch.is_active ? 'success' : 'error'}`}>
             {branch.is_active ? 'Active Hub' : 'Inactive'}
           </span>
+          <button
+            type="button"
+            onClick={() => {
+              downloadManagerShiftReport({
+                branchName: branch.name,
+                branchAddress: branch.address,
+                managerName: 'Branch Administration',
+                orders,
+                riderSettlements: [],
+              });
+            }}
+            className="btn btn--secondary btn--sm"
+            style={{ fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)', gap: 6 }}
+          >
+            <ReceiptTicketIcon size={14} /> Download Branch PDF Report
+          </button>
           <Link href="/manager/orders" className="btn btn--primary btn--sm">
             View Hub Orders ({orders.length})
           </Link>
@@ -108,7 +125,7 @@ export default function AdminBranchDetailPage({ params }: { params: Promise<{ id
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__label">Realized Revenue</div>
+          <div className="stat-card__label">Total Amount Processed</div>
           <div className="stat-card__value" style={{ color: '#059669' }}>
             {formatPeso(branchRevenue)}
           </div>

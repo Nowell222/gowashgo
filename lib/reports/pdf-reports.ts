@@ -121,7 +121,7 @@ export async function downloadAdminPlatformReport(data: any) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('LIFETIME GROSS REVENUE', 20, 58);
+  doc.text('TOTAL AMOUNT PROCESSED (GMV)', 20, 58);
   doc.text('TOTAL ORDERS', 80, 58);
   doc.text('CLEAN WEIGHT PROCESSED', 135, 58);
   doc.text('ACTIVE BRANCH HUBS', 195, 58);
@@ -141,20 +141,30 @@ export async function downloadAdminPlatformReport(data: any) {
   doc.setTextColor(...COLOR_TEXT);
   doc.text('Branch Hubs Performance Summary', 14, 82);
 
+  const totalBranchRevenue = branches.reduce((sum: number, b: any) => sum + (b.revenueCentavos || 0), 0);
+  const totalBranchOrders = branches.reduce((sum: number, b: any) => sum + (b.ordersCount || 0), 0);
+
   autoTable(doc, {
     startY: 86,
-    head: [['Hub Name', 'Physical Address', 'Orders Volume', 'Active Load', 'Assigned Team', 'Gross Revenue (PHP)', 'Status']],
+    head: [['Hub Name', 'Physical Address', 'Orders Volume', 'Active Load', 'Assigned Team', 'Total Amount Processed', 'Status']],
     body: branches.map((b: any) => [
       b.name,
       b.address,
       `${b.ordersCount || 0} orders`,
       `${b.activeOrdersCount || 0} active`,
       `${b.staffCount || 0} staff & riders`,
-      (b.revenueCentavos / 100).toFixed(2),
+      formatPeso(b.revenueCentavos || 0),
       b.isActive ? 'Active' : 'Inactive',
     ]),
+    foot: [['TOTAL PLATFORM PROCESSED', '', `${totalBranchOrders} orders`, '', '', formatPeso(totalBranchRevenue), '']],
     theme: 'grid',
     headStyles: {
+      fillColor: COLOR_DARK,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5,
+    },
+    footStyles: {
       fillColor: COLOR_DARK,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
@@ -174,9 +184,11 @@ export async function downloadAdminPlatformReport(data: any) {
   doc.setTextColor(...COLOR_TEXT);
   doc.text('Platform Orders Ledger', 14, nextY);
 
+  const totalLedgerCentavos = orders.reduce((sum: number, o: any) => sum + (o.totalCentavos || 0), 0);
+
   autoTable(doc, {
     startY: nextY + 4,
-    head: [['Order Number', 'Customer Name', 'Customer Email', 'Branch Hub', 'Status', 'Weight (kg)', 'Payment', 'Amount (PHP)', 'Date']],
+    head: [['Order Number', 'Customer Name', 'Customer Email', 'Branch Hub', 'Status', 'Weight (kg)', 'Payment', 'Amount Processed', 'Date']],
     body: orders.map((o: any) => [
       o.orderNumber,
       o.customerName,
@@ -185,11 +197,18 @@ export async function downloadAdminPlatformReport(data: any) {
       formatOrderStatus(o.status as OrderStatus),
       o.weightKg ? `${o.weightKg} kg` : '—',
       o.paymentMethod.toUpperCase(),
-      (o.totalCentavos / 100).toFixed(2),
+      formatPeso(o.totalCentavos || 0),
       new Date(o.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
     ]),
+    foot: [['TOTAL PROCESSED', `${orders.length} orders`, '', '', '', '', '', formatPeso(totalLedgerCentavos), '']],
     theme: 'striped',
     headStyles: {
+      fillColor: COLOR_PRIMARY,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8,
+    },
+    footStyles: {
       fillColor: COLOR_PRIMARY,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
@@ -240,7 +259,8 @@ export async function downloadManagerShiftReport(props: {
   );
 
   const completedOrders = orders.filter((o) => ['delivered', 'completed'].includes(o.status));
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalRealizedRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalAmountAllOrders = orders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalWeight = completedOrders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
   const unremittedCash = riderSettlements
     .filter((r) => !r.isSettled)
@@ -253,15 +273,15 @@ export async function downloadManagerShiftReport(props: {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('SHIFT REVENUE', 20, 58);
-  doc.text('COMPLETED ORDERS', 70, 58);
+  doc.text('TOTAL AMOUNT PROCESSED', 20, 58);
+  doc.text('COMPLETED ORDERS', 72, 58);
   doc.text('TOTAL WEIGHT', 115, 58);
   doc.text('UNREMITTED COD CASH', 150, 58);
 
   doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPeso(totalRevenue), 20, 67);
-  doc.text(String(completedOrders.length), 70, 67);
+  doc.text(formatPeso(totalRealizedRevenue), 20, 67);
+  doc.text(String(completedOrders.length), 72, 67);
   doc.text(`${totalWeight.toFixed(1)} kg`, 115, 67);
 
   doc.setTextColor(180, 83, 9); // Amber for unremitted cash
@@ -273,6 +293,8 @@ export async function downloadManagerShiftReport(props: {
   doc.setTextColor(...COLOR_TEXT);
   doc.text('Courier Fleet COD Cash Reconciliation', 14, 83);
 
+  const totalCourierCash = riderSettlements.reduce((sum, r) => sum + (r.cashCollected || 0), 0);
+
   autoTable(doc, {
     startY: 87,
     head: [['Courier Driver', 'Contact Phone', 'Orders Delivered', 'COD Cash Collected', 'Remittance Status']],
@@ -283,8 +305,15 @@ export async function downloadManagerShiftReport(props: {
       formatPeso(r.cashCollected || 0),
       r.isSettled ? 'Settled & Verified ✓' : 'Pending Drawer Handover ⚠️',
     ]),
+    foot: [['TOTAL COURIER COLLECTIONS', '', '', formatPeso(totalCourierCash), '']],
     theme: 'grid',
     headStyles: {
+      fillColor: COLOR_DARK,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5,
+    },
+    footStyles: {
       fillColor: COLOR_DARK,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
@@ -306,7 +335,7 @@ export async function downloadManagerShiftReport(props: {
 
   autoTable(doc, {
     startY: nextY + 4,
-    head: [['Order #', 'Customer', 'Courier', 'Status', 'Weight (kg)', 'Payment', 'Total (PHP)']],
+    head: [['Order #', 'Customer', 'Courier', 'Status', 'Weight (kg)', 'Payment', 'Amount Processed']],
     body: orders.slice(0, 35).map((o: any) => [
       o.order_number,
       o.customer?.full_name || 'Customer',
@@ -314,10 +343,17 @@ export async function downloadManagerShiftReport(props: {
       formatOrderStatus(o.status as OrderStatus),
       o.weight_kg ? `${o.weight_kg} kg` : '—',
       (o.payment_method || 'online').toUpperCase(),
-      (o.total / 100).toFixed(2),
+      formatPeso(o.total || 0),
     ]),
+    foot: [['TOTAL SHIFT PROCESSED', `${orders.length} orders`, '', '', `${totalWeight.toFixed(1)} kg`, '', formatPeso(totalAmountAllOrders)]],
     theme: 'striped',
     headStyles: {
+      fillColor: COLOR_PRIMARY,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8,
+    },
+    footStyles: {
       fillColor: COLOR_PRIMARY,
       textColor: [255, 255, 255],
       fontStyle: 'bold',
@@ -370,46 +406,59 @@ export async function downloadStaffFacilityReport(props: {
   const inFolding = orders.filter((o) => o.status === 'folding').length;
   const readyDispatch = orders.filter((o) => o.status === 'ready_for_delivery').length;
 
-  // Active Queue KPIs Box
+  const totalAmountCentavos = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalWeightKg = orders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
+
+  // Active Queue KPIs Box with Total Amount Processed
   doc.setFillColor(...COLOR_BG_LIGHT);
-  doc.roundedRect(14, 52, doc.internal.pageSize.width - 28, 20, 2, 2, 'F');
+  doc.roundedRect(14, 52, doc.internal.pageSize.width - 28, 26, 2, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('INTAKE SORTING', 20, 58);
-  doc.text('WASHING', 60, 58);
-  doc.text('TUMBLE DRYING', 95, 58);
-  doc.text('FOLDING & QC', 135, 58);
-  doc.text('READY DISPATCH', 170, 58);
+  doc.text('TOTAL AMOUNT PROCESSED', 20, 58);
+  doc.text('TOTAL WEIGHT IN QUEUE', 78, 58);
+  doc.text('ACTIVE LOADS', 132, 58);
+  doc.text('FACILITY CYCLE BREAKDOWN', 165, 58);
 
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(`${inSorting} loads`, 20, 66);
-  doc.text(`${inWashing} loads`, 60, 66);
-  doc.text(`${inDrying} loads`, 95, 66);
-  doc.text(`${inFolding} loads`, 135, 66);
-  doc.text(`${readyDispatch} loads`, 170, 66);
+  doc.text(formatPeso(totalAmountCentavos), 20, 67);
+  doc.text(`${totalWeightKg.toFixed(1)} kg`, 78, 67);
+  doc.text(`${orders.length} orders`, 132, 67);
 
-  // Active Queue Manifest Table
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text(`Sort: ${inSorting}  |  Wash: ${inWashing}  |  Dry: ${inDrying}`, 165, 65);
+  doc.text(`Fold: ${inFolding}  |  Dispatch: ${readyDispatch}`, 165, 71);
+
+  // Active Queue Manifest Table with Amount Processed column & total footer
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLOR_TEXT);
-  doc.text('Live Facility Wash Queue Manifest', 14, 82);
+  doc.text('Live Facility Wash Queue Manifest', 14, 86);
 
   autoTable(doc, {
-    startY: 86,
-    head: [['Order Number', 'Customer', 'Current Stage', 'Intake Weight', 'Special Care / Stain Remarks', 'Pickup Address']],
+    startY: 90,
+    head: [['Order Number', 'Customer', 'Current Stage', 'Intake Weight', 'Amount Processed', 'Special Care / Remarks']],
     body: orders.map((o: any) => [
       o.order_number,
       o.customer?.full_name || 'Customer',
       formatOrderStatus(o.status as OrderStatus),
-      o.weight_kg ? `${o.weight_kg} kg` : 'Standard Load',
-      o.intake_discrepancy_note || o.special_instructions || 'Fabric-safe regular cycle',
-      o.pickup_address || '—',
+      o.weight_kg ? `${o.weight_kg} kg` : '—',
+      formatPeso(o.total || 0),
+      o.intake_discrepancy_note || o.special_instructions || 'Standard fabric care',
     ]),
+    foot: [['TOTAL FACILITY PROCESSED', `${orders.length} orders`, '', `${totalWeightKg.toFixed(1)} kg`, formatPeso(totalAmountCentavos), '']],
     theme: 'grid',
     headStyles: {
+      fillColor: COLOR_DARK,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 8.5,
+    },
+    footStyles: {
       fillColor: COLOR_DARK,
       textColor: [255, 255, 255],
       fontStyle: 'bold',

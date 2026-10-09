@@ -119,6 +119,7 @@ export default function StaffDashboardPage() {
 
   const totalQueueBags = facilityOrders.length;
   const totalQueueKg = facilityOrders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
+  const totalAmountProcessed = orders.reduce((sum, o) => sum + (o.total || 0), 0);
 
   // Filtered orders list
   const displayOrders = orders.filter((o) => {
@@ -187,7 +188,7 @@ export default function StaffDashboardPage() {
                 fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
               }}
             >
-              {totalQueueKg.toFixed(1)} kg Total Laundry in Queue
+              {totalQueueKg.toFixed(1)} kg Total Queue · {formatPeso(totalAmountProcessed)} Total Amount Processed
             </div>
           </div>
 
@@ -215,6 +216,12 @@ export default function StaffDashboardPage() {
               <div style={{ fontSize: 10, fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Folding / Table</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#047857', fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)' }}>
                 {foldingBags.length}
+              </div>
+            </div>
+            <div style={{ background: '#FFFFFF', padding: '8px 14px', minWidth: 120 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#0E7490', textTransform: 'uppercase' }}>Total Amount Processed</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#0E7490', fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)' }}>
+                {formatPeso(totalAmountProcessed)}
               </div>
             </div>
           </div>

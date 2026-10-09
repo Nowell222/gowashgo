@@ -370,7 +370,7 @@ export default function ManagerDashboardPage() {
         {/* Block 1 */}
         <div style={{ background: '#FFFFFF', padding: '16px 18px' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Delivered Revenue
+            Total Amount Processed
           </div>
           <div
             style={{
