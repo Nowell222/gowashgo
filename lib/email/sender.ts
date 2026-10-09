@@ -33,13 +33,13 @@ const DEFAULT_FROM = 'nowellandal71@gmail.com';
  * Resolve the dynamic application base URL for links embedded in emails.
  */
 export function getAppBaseUrl(request?: Request): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')) {
     return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
   }
   if (request) {
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
     const proto = request.headers.get('x-forwarded-proto') || 'https';
-    if (host) {
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
       return `${proto}://${host}`;
     }
   }

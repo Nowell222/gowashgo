@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { inviteRegisterSchema, type InviteRegisterInput } from '@/lib/validators/auth';
 import { ROLE_LABELS, ROLE_HOME_ROUTES } from '@/lib/auth/roles';
+import { CareTagIcon, ScooterCourierIcon, WaterDropIcon, CheckmarkBadgeIcon } from '@/components/icons';
 import type { UserRole, Invite, Branch } from '@/lib/types';
 
 interface InviteInfo {
@@ -30,6 +32,7 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Load invite info
   useEffect(() => {
@@ -54,7 +57,7 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
           setFormData((prev) => ({ ...prev, email: data.email }));
         }
       } catch {
-        setInviteError('Failed to load invite information.');
+        setInviteError('Failed to load invite information. Please check your network connection.');
       } finally {
         setLoadingInvite(false);
       }
@@ -134,43 +137,131 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
     }
   }
 
+  // Loading State
   if (loadingInvite) {
     return (
-      <div className="auth-card">
-        <div className="auth-card__logo">
-          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
-          <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
-        </div>
-        <div style={{ textAlign: 'center', padding: 'var(--space-8) 0' }}>
-          <div className="btn__spinner" style={{ margin: '0 auto', borderColor: 'var(--color-border)', borderTopColor: 'var(--color-primary)' }} />
-          <p style={{ marginTop: 'var(--space-4)', color: 'var(--color-text-secondary)' }}>
-            Verifying invite...
+      <div
+        style={{
+          minHeight: '100dvh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 16px',
+          background: '#FAF8F5',
+          fontFamily: 'var(--font-karla, "Karla", sans-serif)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 440,
+            width: '100%',
+            background: '#FFFFFF',
+            padding: '36px 28px',
+            textAlign: 'center',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <img
+            src="/icons/gowashgo-icon.png"
+            alt="GoWashGo"
+            width={48}
+            height={48}
+            style={{ borderRadius: 10, margin: '0 auto 16px', display: 'block' }}
+          />
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              color: '#0F172A',
+              marginBottom: 6,
+            }}
+          >
+            Verifying Invitation Token...
+          </div>
+          <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>
+            Checking your activation code against the GoWashGo operations registry.
           </p>
         </div>
       </div>
     );
   }
 
+  // Error State
   if (inviteError) {
     return (
-      <div className="auth-card">
-        <div className="auth-card__logo">
-          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
-          <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
-        </div>
-        <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: 'var(--radius-full)',
-            background: 'var(--color-error-bg)', color: 'var(--color-error)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 'var(--text-2xl)', margin: '0 auto var(--space-4)'
-          }}>✕</div>
-          <p style={{ color: 'var(--color-text)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>
-            Invalid Invite
+      <div
+        style={{
+          minHeight: '100dvh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 16px',
+          background: '#FAF8F5',
+          fontFamily: 'var(--font-karla, "Karla", sans-serif)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 480,
+            width: '100%',
+            background: '#FFFFFF',
+            padding: '36px 32px',
+            textAlign: 'center',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <img
+            src="/icons/gowashgo-icon.png"
+            alt="GoWashGo"
+            width={48}
+            height={48}
+            style={{ borderRadius: 10, margin: '0 auto 16px', display: 'block' }}
+          />
+
+          <div
+            style={{
+              background: '#FEF2F2',
+              color: '#991B1B',
+              padding: '16px 20px',
+              marginBottom: 20,
+              textAlign: 'left',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                marginBottom: 4,
+              }}
+            >
+              Invalid or Expired Invitation
+            </div>
+            <div style={{ fontSize: 13, color: '#7F1D1D', lineHeight: 1.5 }}>
+              {inviteError}
+            </div>
+          </div>
+
+          <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6, marginBottom: 24 }}>
+            Invitation links expire after 7 days or after being redeemed. Please contact your Branch Manager to request a new recruitment link.
           </p>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
-            {inviteError}
-          </p>
+
+          <Link
+            href="/"
+            style={{
+              display: 'inline-block',
+              background: '#0E7490',
+              color: '#FFFFFF',
+              padding: '12px 24px',
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              textDecoration: 'none',
+            }}
+          >
+            ← Return to GoWashGo Home
+          </Link>
         </div>
       </div>
     );
@@ -178,124 +269,462 @@ export default function InviteRedeemPage({ params }: { params: Promise<{ code: s
 
   if (!inviteInfo) return null;
 
+  const roleTitle =
+    inviteInfo.invite.role === 'rider'
+      ? 'Delivery Courier Rider'
+      : inviteInfo.invite.role === 'staff'
+      ? 'Facility Laundry Staff'
+      : 'Branch Manager';
+
   return (
-    <div className="auth-card">
-      <div className="auth-card__logo">
-        <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px', display: 'block' }} />
-        <h1 className="auth-card__logo-title"><span className="gradient-text">GoWashGo</span></h1>
-        <p className="auth-card__logo-subtitle">Join the team</p>
-      </div>
+    <div
+      style={{
+        minHeight: '100dvh',
+        background: '#FAF8F5',
+        padding: '32px 16px 64px',
+        fontFamily: 'var(--font-karla, "Karla", sans-serif)',
+        color: '#0F172A',
+      }}
+    >
+      <div style={{ maxWidth: 540, margin: '0 auto' }}>
+        {/* Brand Header Navigation */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20,
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#0E7490',
+              textDecoration: 'none',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
+            ← Back to Home
+          </Link>
 
-      <div className="invite-info">
-        <div className="invite-info__label">You&apos;re invited</div>
-        <div className="invite-info__detail">
-          <span>Role:</span> <strong>{ROLE_LABELS[inviteInfo.invite.role]}</strong>
-        </div>
-        <div className="invite-info__detail">
-          <span>Branch:</span> <strong>{inviteInfo.branch.name}</strong>
-        </div>
-      </div>
-
-      {globalError && (
-        <div className="toast toast--error" style={{ marginBottom: 'var(--space-4)' }}>
-          <div className="toast__message">{globalError}</div>
-        </div>
-      )}
-
-      <form className="auth-form" onSubmit={handleSubmit} noValidate>
-        <div className="input-group">
-          <label className="input-group__label" htmlFor="invite-name">
-            Full name <span className="input-group__required">*</span>
-          </label>
-          <input
-            id="invite-name"
-            className={`input ${errors.full_name ? 'input--error' : ''}`}
-            type="text"
-            name="full_name"
-            placeholder="Your full name"
-            value={formData.full_name}
-            onChange={handleChange}
-            autoComplete="name"
-            autoFocus
-          />
-          {errors.full_name && <span className="input-group__error">{errors.full_name}</span>}
-        </div>
-
-        <div className="input-group">
-          <label className="input-group__label" htmlFor="invite-email">
-            Email address <span className="input-group__required">*</span>
-          </label>
-          <input
-            id="invite-email"
-            className={`input ${errors.email ? 'input--error' : ''}`}
-            type="email"
-            name="email"
-            placeholder="you@example.com"
-            value={formData.email}
-            onChange={handleChange}
-            autoComplete="email"
-            readOnly={!!inviteInfo.invite.email}
-          />
-          {errors.email && <span className="input-group__error">{errors.email}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img
+              src="/icons/gowashgo-icon.png"
+              alt="GoWashGo"
+              width={26}
+              height={26}
+              style={{ borderRadius: 6, objectFit: 'contain' }}
+            />
+            <span
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: '#164E63',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              gowashgo
+            </span>
+          </div>
         </div>
 
-        <div className="input-group">
-          <label className="input-group__label" htmlFor="invite-phone">
-            Phone number <span className="input-group__hint">(optional)</span>
-          </label>
-          <input
-            id="invite-phone"
-            className={`input ${errors.phone ? 'input--error' : ''}`}
-            type="tel"
-            name="phone"
-            placeholder="+639171234567"
-            value={formData.phone}
-            onChange={handleChange}
-            autoComplete="tel"
-          />
-          {errors.phone && <span className="input-group__error">{errors.phone}</span>}
+        {/* Top Highlight in Flat Amber Block */}
+        <div
+          style={{
+            background: '#FEF3C7',
+            padding: '20px 24px',
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#92400E',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              marginBottom: 4,
+            }}
+          >
+            OFFICIAL OPERATIONS INVITATION · {inviteInfo.branch.name.toUpperCase()}
+          </div>
+
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#78350F',
+              letterSpacing: '-0.02em',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              margin: '0 0 10px 0',
+              lineHeight: 1.2,
+            }}
+          >
+            Join as {roleTitle}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 13,
+              color: '#92400E',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: '#FFFFFF',
+                padding: '4px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#0E7490',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              {inviteInfo.invite.role === 'rider' ? (
+                <ScooterCourierIcon size={14} color="#0E7490" />
+              ) : (
+                <CareTagIcon size={14} color="#0E7490" />
+              )}
+              {ROLE_LABELS[inviteInfo.invite.role]}
+            </span>
+
+            <span>•</span>
+            <span>Hub: <strong>{inviteInfo.branch.name}</strong></span>
+            <span>•</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>Code: {code}</span>
+          </div>
         </div>
 
-        <div className="input-group">
-          <label className="input-group__label" htmlFor="invite-password">
-            Create password <span className="input-group__required">*</span>
-          </label>
-          <input
-            id="invite-password"
-            className={`input ${errors.password ? 'input--error' : ''}`}
-            type="password"
-            name="password"
-            placeholder="At least 8 characters"
-            value={formData.password}
-            onChange={handleChange}
-            autoComplete="new-password"
-          />
-          {errors.password && <span className="input-group__error">{errors.password}</span>}
-        </div>
+        {/* Main Registration Form Card (Flat, Clean) */}
+        <div
+          style={{
+            background: '#FFFFFF',
+            padding: '28px 28px 32px',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <div style={{ marginBottom: 20 }}>
+            <h1
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                margin: '0 0 4px',
+                color: '#0F172A',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              Activate Your Team Account
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+              Set your name and password to complete onboarding and access your shift terminal.
+            </p>
+          </div>
 
-        <div className="input-group">
-          <label className="input-group__label" htmlFor="invite-confirm">
-            Confirm password <span className="input-group__required">*</span>
-          </label>
-          <input
-            id="invite-confirm"
-            className={`input ${errors.confirm_password ? 'input--error' : ''}`}
-            type="password"
-            name="confirm_password"
-            placeholder="Re-enter your password"
-            value={formData.confirm_password}
-            onChange={handleChange}
-            autoComplete="new-password"
-          />
-          {errors.confirm_password && (
-            <span className="input-group__error">{errors.confirm_password}</span>
+          {globalError && (
+            <div
+              style={{
+                background: '#FEF2F2',
+                color: '#991B1B',
+                padding: '10px 14px',
+                fontSize: 13,
+                marginBottom: 16,
+              }}
+            >
+              {globalError}
+            </div>
           )}
-        </div>
 
-        <button type="submit" className="btn btn--primary btn--full btn--lg" disabled={loading}>
-          {loading ? <span className="btn__spinner" /> : 'Complete Registration'}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} noValidate>
+            {/* Full Name */}
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="invite-name"
+                style={{
+                  display: 'block',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#475569',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginBottom: 6,
+                }}
+              >
+                Full Name <span style={{ color: '#0E7490' }}>*</span>
+              </label>
+              <input
+                id="invite-name"
+                type="text"
+                name="full_name"
+                placeholder="e.g. Juan dela Cruz"
+                value={formData.full_name}
+                onChange={handleChange}
+                autoComplete="name"
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  fontSize: 14,
+                  background: '#F8FAFC',
+                  border: errors.full_name ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                  color: '#0F172A',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {errors.full_name && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
+                  {errors.full_name}
+                </div>
+              )}
+            </div>
+
+            {/* Email Address */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <label
+                  htmlFor="invite-email"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#475569',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Email Address <span style={{ color: '#0E7490' }}>*</span>
+                </label>
+                {inviteInfo.invite.email && (
+                  <span style={{ fontSize: 11, color: '#0E7490', fontWeight: 600 }}>
+                    🔒 Locked to invitation
+                  </span>
+                )}
+              </div>
+              <input
+                id="invite-email"
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                readOnly={!!inviteInfo.invite.email}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  fontSize: 14,
+                  background: inviteInfo.invite.email ? '#F1F5F9' : '#F8FAFC',
+                  border: errors.email ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                  color: inviteInfo.invite.email ? '#475569' : '#0F172A',
+                  cursor: inviteInfo.invite.email ? 'not-allowed' : 'text',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {errors.email && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
+                  {errors.email}
+                </div>
+              )}
+            </div>
+
+            {/* Phone Number */}
+            <div style={{ marginBottom: 16 }}>
+              <label
+                htmlFor="invite-phone"
+                style={{
+                  display: 'block',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#475569',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginBottom: 6,
+                }}
+              >
+                Mobile Phone <span style={{ color: '#94A3B8', fontWeight: 500 }}>(Optional)</span>
+              </label>
+              <input
+                id="invite-phone"
+                type="tel"
+                name="phone"
+                placeholder="+63 917 123 4567"
+                value={formData.phone}
+                onChange={handleChange}
+                autoComplete="tel"
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  fontSize: 14,
+                  background: '#F8FAFC',
+                  border: errors.phone ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                  color: '#0F172A',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {errors.phone && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
+                  {errors.phone}
+                </div>
+              )}
+            </div>
+
+            {/* Password */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <label
+                  htmlFor="invite-password"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#475569',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Create Password <span style={{ color: '#0E7490' }}>*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: 11,
+                    color: '#0E7490',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <input
+                id="invite-password"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                placeholder="At least 8 characters"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="new-password"
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  fontSize: 14,
+                  background: '#F8FAFC',
+                  border: errors.password ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                  color: '#0F172A',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {errors.password && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
+                  {errors.password}
+                </div>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div style={{ marginBottom: 24 }}>
+              <label
+                htmlFor="invite-confirm"
+                style={{
+                  display: 'block',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: '#475569',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  marginBottom: 6,
+                }}
+              >
+                Confirm Password <span style={{ color: '#0E7490' }}>*</span>
+              </label>
+              <input
+                id="invite-confirm"
+                type={showPassword ? 'text' : 'password'}
+                name="confirm_password"
+                placeholder="Re-enter your password"
+                value={formData.confirm_password}
+                onChange={handleChange}
+                autoComplete="new-password"
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  fontSize: 14,
+                  background: '#F8FAFC',
+                  border: errors.confirm_password ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                  color: '#0F172A',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {errors.confirm_password && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
+                  {errors.confirm_password}
+                </div>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: '#0E7490',
+                color: '#FFFFFF',
+                border: 'none',
+                height: 46,
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.02em',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              {loading ? 'Activating Account & Logging In...' : 'Complete Registration & Enter Hub →'}
+            </button>
+          </form>
+
+          {/* Bottom Onboarding Trust Strip */}
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 18,
+              borderTop: '1px solid #F1F5F9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 14,
+              fontSize: 11,
+              color: '#64748B',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span>🧺 Fabric-safe training on shift</span>
+            <span>•</span>
+            <span>⚖️ Calibrated scale weighing</span>
+            <span>•</span>
+            <span>⚡ Real-time terminal access</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
