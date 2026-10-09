@@ -109,6 +109,28 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-card">
+      <div style={{ marginBottom: 16 }}>
+        <Link
+          href="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            color: '#64748B',
+            textDecoration: 'none',
+            padding: '6px 12px',
+            borderRadius: 8,
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span>←</span> Back to Home
+        </Link>
+      </div>
+
       <div className="auth-card__logo">
         <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px' }} />
         <h1 className="auth-card__logo-title">

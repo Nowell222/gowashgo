@@ -1,28 +1,18 @@
 'use client';
 
-import { useState, Suspense, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { LoginForm } from '@/components/auth/LoginForm';
 import LaundryChathead from '@/components/chat/LaundryChathead';
 
 export default function LandingPage() {
   const [estWeight, setEstWeight] = useState<number>(7);
   const [selectedService, setSelectedService] = useState<'fold' | 'press' | 'comforter'>('fold');
-  const loginSectionRef = useRef<HTMLDivElement>(null);
 
   // Pricing formula: Service rate/kg * weight + 50 flat delivery fee
   const ratePerKg = selectedService === 'fold' ? 35 : selectedService === 'press' ? 55 : 60;
   const washTotal = estWeight * ratePerKg;
   const deliveryFee = 50;
   const grandTotal = washTotal + deliveryFee;
-
-  const scrollToLogin = () => {
-    loginSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-    const emailInput = document.getElementById('login-email');
-    if (emailInput) {
-      setTimeout(() => emailInput.focus(), 400);
-    }
-  };
 
   return (
     <div style={{ minHeight: '100dvh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -80,9 +70,8 @@ export default function LandingPage() {
 
           {/* Action CTAs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button
-              onClick={scrollToLogin}
-              type="button"
+            <Link
+              href="/login"
               style={{
                 padding: '9px 18px',
                 fontSize: 14,
@@ -91,11 +80,11 @@ export default function LandingPage() {
                 background: '#F0F9FF',
                 border: '1px solid #BAE6FD',
                 borderRadius: '8px',
-                cursor: 'pointer',
+                textDecoration: 'none',
               }}
             >
               Sign In
-            </button>
+            </Link>
             <Link
               href="/register"
               style={{
@@ -116,7 +105,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ================= 2. HERO SPLIT: STORY & CONNECTED LOGIN PORTAL ================= */}
+      {/* ================= 2. HERO SPLIT: STORY & LAUNDRY SHOWCASE ================= */}
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px 60px' }}>
         <div style={{
           display: 'grid',
@@ -268,11 +257,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right Column: Directly Connected Login Portal Card */}
-          <div ref={loginSectionRef} id="login-portal" style={{ display: 'flex', justifyContent: 'center' }}>
+          {/* Right Column: Laundry & Doorstep Scale Guarantee Showcase */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{
               width: '100%',
-              maxWidth: 420,
+              maxWidth: 440,
               background: '#FFFFFF',
               borderRadius: 16,
               border: '1px solid #E2E8F0',
@@ -280,37 +269,140 @@ export default function LandingPage() {
               boxShadow: '0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(0, 0, 0, 0.03)',
             }}>
               {/* Card Header */}
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <img
-                  src="/icons/gowashgo-icon.png"
-                  alt="GoWashGo"
-                  width={48}
-                  height={48}
-                  style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }}
-                />
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', margin: 0 }}>
-                  Access Your Account
-                </h2>
-                <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
-                  Track active pickups, view scale receipts &amp; dispatch
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 12,
+                  background: '#E0F2FE',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                }}>
+                  ⚖️
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                    Doorstep Scale Verification
+                  </h2>
+                  <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>
+                    Zero guessing • Weighed in front of you
+                  </p>
+                </div>
               </div>
 
-              {/* Embedded Login Form with Suspense Boundary */}
-              <Suspense fallback={
-                <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <div className="btn__spinner" style={{ margin: '0 auto' }} />
-                  <p style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>Loading login portal...</p>
+              {/* Live Scale Receipt Simulation */}
+              <div style={{
+                background: '#F8FAFC',
+                border: '1.5px solid #E2E8F0',
+                borderRadius: 12,
+                padding: '16px 18px',
+                marginBottom: 18,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B' }}>
+                    Calibrated Scale Reading
+                  </span>
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#0284C7',
+                    background: '#E0F2FE',
+                    padding: '3px 8px',
+                    borderRadius: 12,
+                  }}>
+                    6.50 kg Net Load
+                  </span>
                 </div>
-              }>
-                <LoginForm embedded={true} />
-              </Suspense>
 
-              {/* Register Callout */}
-              <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: '#64748B' }}>
-                New to GoWashGo?{' '}
-                <Link href="/register" style={{ color: '#0284C7', fontWeight: 700, textDecoration: 'none' }}>
-                  Create Customer Account
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                    <span>Wash, Dry &amp; Fold (6.5 kg @ ₱35/kg)</span>
+                    <strong style={{ color: '#0F172A' }}>₱227.50</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                    <span>Doorstep Roundtrip Delivery</span>
+                    <strong style={{ color: '#0F172A' }}>₱50.00</strong>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: 8,
+                    marginTop: 4,
+                    borderTop: '1px dashed #CBD5E1',
+                  }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>Total Locked In:</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: '#0284C7' }}>₱277.50</span>
+                  </div>
+                </div>
+
+                <div style={{
+                  marginTop: 10,
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#065F46',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}>
+                  <span>✓</span> Verified at your doorstep before wash begins
+                </div>
+              </div>
+
+              {/* 4 Laundry Quality Commitments */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                {[
+                  '1 Bag = 1 Load (Never mixed with other clients)',
+                  'Commercial hypoallergenic & color-safe detergents',
+                  'Weather-proof sealed packaging delivered in 24–48h',
+                  'Flexible payment: GCash, Maya, cards, or Cash on Delivery',
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#334155' }}>
+                    <span style={{ color: '#0284C7', fontWeight: 800, fontSize: 14 }}>•</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Link
+                  href="/register"
+                  style={{
+                    padding: '12px 18px',
+                    borderRadius: 10,
+                    background: '#0284C7',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
+                  }}
+                >
+                  Book Your Pickup Now →
+                </Link>
+                <Link
+                  href="/login"
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: 10,
+                    background: '#F8FAFC',
+                    border: '1px solid #CBD5E1',
+                    color: '#334155',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Already have an account? Sign In
                 </Link>
               </div>
             </div>
@@ -674,13 +766,12 @@ export default function LandingPage() {
               Account Access
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-              <button
-                onClick={scrollToLogin}
-                type="button"
-                style={{ background: 'none', border: 'none', padding: 0, color: '#0284C7', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+              <Link
+                href="/login"
+                style={{ color: '#0284C7', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}
               >
                 Sign In to Account
-              </button>
+              </Link>
               <Link href="/register" style={{ color: '#94A3B8', textDecoration: 'none' }}>
                 Register New Customer
               </Link>
