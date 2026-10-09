@@ -15,6 +15,7 @@ import {
   ScooterCourierIcon,
   CheckmarkBadgeIcon,
 } from '@/components/icons';
+import { downloadStaffFacilityReport } from '@/lib/reports/pdf-reports';
 import type { OrderWithDetails, OrderStatus } from '@/lib/types';
 
 export default function StaffDashboardPage() {
@@ -342,20 +343,42 @@ export default function StaffDashboardPage() {
           </button>
         </div>
 
-        <Link
-          href="/staff/orders"
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: '#0E7490',
-            background: '#ECFEFF',
-            padding: '7px 14px',
-            textDecoration: 'none',
-            fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
-          }}
-        >
-          View Order Archive →
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => downloadStaffFacilityReport({ branchName: 'San Juan Batangas Hub', orders })}
+            style={{
+              padding: '7px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              background: '#0E7490',
+              color: '#FFFFFF',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <ReceiptTicketIcon size={14} color="#FFFFFF" />
+            Download Facility Manifest (PDF)
+          </button>
+          <Link
+            href="/staff/orders"
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#0E7490',
+              background: '#ECFEFF',
+              padding: '7px 14px',
+              textDecoration: 'none',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            }}
+          >
+            View Order Archive →
+          </Link>
+        </div>
       </div>
 
       {/* ========================================================================= */}

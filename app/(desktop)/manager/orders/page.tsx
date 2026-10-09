@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor } from '@/lib/orders/status-machine';
+import { ReceiptTicketIcon } from '@/components/icons';
+import { downloadManagerShiftReport } from '@/lib/reports/pdf-reports';
 import type { OrderWithDetails, OrderStatus } from '@/lib/types';
 
 export default function ManagerOrdersPage() {
@@ -51,6 +53,22 @@ export default function ManagerOrdersPage() {
             Supervise all orders, track delivery performance, and analyze financial throughput.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            downloadManagerShiftReport({
+              branchName: 'San Juan Batangas Hub',
+              branchAddress: 'General Luna St., Poblacion, San Juan, Batangas',
+              managerName: 'Branch Manager',
+              orders,
+              riderSettlements: [],
+            });
+          }}
+          className="btn btn--primary btn--sm"
+          style={{ fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)', background: '#0E7490', gap: 6 }}
+        >
+          <ReceiptTicketIcon size={14} /> Download Orders PDF
+        </button>
       </div>
 
       {/* Revenue & Pipeline Metrics */}

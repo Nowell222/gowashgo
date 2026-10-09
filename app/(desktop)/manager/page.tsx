@@ -14,6 +14,7 @@ import {
   CareTagIcon,
   AlertFlagIcon,
 } from '@/components/icons';
+import { downloadManagerShiftReport } from '@/lib/reports/pdf-reports';
 import type { User, Branch, OrderWithDetails } from '@/lib/types';
 
 interface DailyReportRow {
@@ -278,8 +279,34 @@ export default function ManagerDashboardPage() {
             </div>
           </div>
 
-          {/* Quick shop actions */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                downloadManagerShiftReport({
+                  branchName: branch?.name || 'San Juan Batangas Hub',
+                  branchAddress: branch?.address || 'General Luna St., Poblacion, San Juan, Batangas',
+                  managerName: user?.full_name || 'Branch Manager',
+                  orders,
+                  riderSettlements,
+                });
+              }}
+              style={{
+                background: '#78350F',
+                color: '#FFFFFF',
+                padding: '10px 18px',
+                fontSize: 12,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <ReceiptTicketIcon size={14} /> Download Shift PDF Report
+            </button>
             <button
               type="button"
               onClick={handleExportCsv}
@@ -298,8 +325,8 @@ export default function ManagerDashboardPage() {
             <Link
               href="/manager/orders"
               style={{
-                background: '#78350F',
-                color: '#FFFFFF',
+                background: '#FFFFFF',
+                color: '#78350F',
                 padding: '10px 18px',
                 fontSize: 12,
                 fontWeight: 700,

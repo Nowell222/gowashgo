@@ -14,6 +14,7 @@ export default function AdminBranchDetailPage({ params }: { params: Promise<{ id
   const [staff, setStaff] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [staffExpanded, setStaffExpanded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -139,38 +140,65 @@ export default function AdminBranchDetailPage({ params }: { params: Promise<{ id
             No staff or couriers assigned to this facility yet.
           </p>
         ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Team Member</th>
-                  <th>Role</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staff.map((u) => (
-                  <tr key={u.id}>
-                    <td style={{ fontWeight: 600 }}>{u.full_name}</td>
-                    <td>
-                      <span className="status-badge status-badge--info">
-                        {ROLE_LABELS[u.role as UserRole] || u.role}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 12, color: '#64748B' }}>{u.email}</td>
-                    <td style={{ fontSize: 12 }}>{u.phone || '—'}</td>
-                    <td>
-                      <span className={`status-badge status-badge--${u.is_active ? 'success' : 'error'}`}>
-                        {u.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
+          <>
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Team Member</th>
+                    <th>Role</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(staffExpanded ? staff : staff.slice(0, 3)).map((u) => (
+                    <tr key={u.id}>
+                      <td style={{ fontWeight: 600 }}>{u.full_name}</td>
+                      <td>
+                        <span className="status-badge status-badge--info">
+                          {ROLE_LABELS[u.role as UserRole] || u.role}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12, color: '#64748B' }}>{u.email}</td>
+                      <td style={{ fontSize: 12 }}>{u.phone || '—'}</td>
+                      <td>
+                        <span className={`status-badge status-badge--${u.is_active ? 'success' : 'error'}`}>
+                          {u.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {staff.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setStaffExpanded(!staffExpanded)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: '#FAF8F5',
+                  color: '#0E7490',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                  marginTop: 10,
+                  borderRadius: 2,
+                  textAlign: 'center',
+                }}
+              >
+                {staffExpanded
+                  ? '▲ Collapse to 3 Members'
+                  : `▼ View More (${staff.length - 3} more members)`}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

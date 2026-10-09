@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus, getOrderStatusColor, getNextStatuses } from '@/lib/orders/status-machine';
 import WeighIntakeModal from '@/components/staff/WeighIntakeModal';
+import { ReceiptTicketIcon } from '@/components/icons';
+import { downloadStaffFacilityReport } from '@/lib/reports/pdf-reports';
 import type { OrderWithDetails, OrderStatus, User } from '@/lib/types';
 
 export default function StaffOrdersPage() {
@@ -147,6 +149,16 @@ export default function StaffOrdersPage() {
           <p className="page-heading__subtitle">
             Inspect customer laundry items, AI recommendations, dispatch riders, and track progress.
           </p>
+        </div>
+        <div className="page-heading__actions">
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            onClick={() => downloadStaffFacilityReport({ branchName: 'San Juan Batangas Hub', orders })}
+            style={{ fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)', background: '#0E7490', gap: 6 }}
+          >
+            <ReceiptTicketIcon size={14} /> Download Facility Manifest (PDF)
+          </button>
         </div>
       </div>
 

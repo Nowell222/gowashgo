@@ -15,6 +15,7 @@ import {
   WaterDropIcon,
   HangerIcon,
 } from '@/components/icons';
+import { downloadAdminPlatformReport } from '@/lib/reports/pdf-reports';
 import type { OrderStatus } from '@/lib/types';
 
 interface AdminOverviewData {
@@ -76,6 +77,8 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [ordersExpanded, setOrdersExpanded] = useState(false);
+  const [eventsExpanded, setEventsExpanded] = useState(false);
 
   async function loadOverview() {
     try {
@@ -147,13 +150,21 @@ export default function AdminDashboardPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             type="button"
+            onClick={() => data && downloadAdminPlatformReport(data)}
+            className="btn btn--primary btn--sm"
+            style={{ fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)', background: '#0E7490', gap: 6 }}
+          >
+            <ReceiptTicketIcon size={14} /> Download PDF Report
+          </button>
+          <button
+            type="button"
             onClick={handleExportCsv}
             className="btn btn--secondary btn--sm"
             style={{ fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)' }}
           >
-            Export Platform Ledger
+            Export CSV
           </button>
-          <Link href="/admin/branches/new" className="btn btn--primary btn--sm">
+          <Link href="/admin/branches/new" className="btn btn--secondary btn--sm">
             <BasketIcon size={14} /> + New Branch
           </Link>
           <Link href="/admin/users" className="btn btn--secondary btn--sm">
@@ -429,49 +440,77 @@ export default function AdminDashboardPage() {
               <p className="empty-state__title">No orders placed yet</p>
             </div>
           ) : (
-            <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Order #</th>
-                    <th>Customer</th>
-                    <th>Branch</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.recentOrders || []).map((o) => {
-                    const statusColor = getOrderStatusColor(o.status as OrderStatus);
-                    return (
-                      <tr key={o.id}>
-                        <td>
-                          <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono, monospace)', color: '#0E7490' }}>
-                            {o.orderNumber}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#94A3B8' }}>
-                            {new Date(o.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{o.customerName}</div>
-                          <div style={{ fontSize: 11, color: '#94A3B8' }}>{o.customerEmail}</div>
-                        </td>
-                        <td style={{ fontSize: 12, color: '#475569' }}>{o.branchName}</td>
-                        <td>
-                          <span className={`status-badge status-badge--${statusColor}`}>
-                            {formatOrderStatus(o.status as OrderStatus)}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#0F172A' }}>
-                          {formatPeso(o.totalCentavos)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Customer</th>
+                      <th>Branch</th>
+                      <th>Status</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(ordersExpanded ? (data?.recentOrders || []) : (data?.recentOrders || []).slice(0, 3)).map((o) => {
+                      const statusColor = getOrderStatusColor(o.status as OrderStatus);
+                      return (
+                        <tr key={o.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono, monospace)', color: '#0E7490' }}>
+                              {o.orderNumber}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#94A3B8' }}>
+                              {new Date(o.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{o.customerName}</div>
+                            <div style={{ fontSize: 11, color: '#94A3B8' }}>{o.customerEmail}</div>
+                          </td>
+                          <td style={{ fontSize: 12, color: '#475569' }}>{o.branchName}</td>
+                          <td>
+                            <span className={`status-badge status-badge--${statusColor}`}>
+                              {formatOrderStatus(o.status as OrderStatus)}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 700, color: '#0F172A' }}>
+                            {formatPeso(o.totalCentavos)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {(data?.recentOrders || []).length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setOrdersExpanded(!ordersExpanded)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: '#FAF8F5',
+                    color: '#0E7490',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                    marginTop: 10,
+                    borderRadius: 2,
+                    textAlign: 'center',
+                    transition: 'background 0.15s ease',
+                  }}
+                >
+                  {ordersExpanded
+                    ? '▲ Collapse to 3 Orders'
+                    : `▼ View More (${(data?.recentOrders?.length || 0) - 3} more orders)`}
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -496,37 +535,65 @@ export default function AdminDashboardPage() {
           ) : (data?.recentEvents || []).length === 0 ? (
             <p style={{ fontSize: 13, color: '#94A3B8' }}>No status events logged yet.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {(data?.recentEvents || []).map((ev) => {
-                const statusColor = getOrderStatusColor(ev.status as OrderStatus);
-                return (
-                  <div
-                    key={ev.id}
-                    style={{
-                      borderLeft: '3px solid #0E7490',
-                      paddingLeft: 12,
-                      paddingTop: 2,
-                      paddingBottom: 2,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#164E63', fontFamily: 'var(--font-mono, monospace)' }}>
-                        {ev.orderNumber}
-                      </span>
-                      <span className={`status-badge status-badge--${statusColor}`} style={{ fontSize: 10, padding: '2px 6px' }}>
-                        {formatOrderStatus(ev.status as OrderStatus)}
-                      </span>
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {(eventsExpanded ? (data?.recentEvents || []) : (data?.recentEvents || []).slice(0, 3)).map((ev) => {
+                  const statusColor = getOrderStatusColor(ev.status as OrderStatus);
+                  return (
+                    <div
+                      key={ev.id}
+                      style={{
+                        borderLeft: '3px solid #0E7490',
+                        paddingLeft: 12,
+                        paddingTop: 2,
+                        paddingBottom: 2,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#164E63', fontFamily: 'var(--font-mono, monospace)' }}>
+                          {ev.orderNumber}
+                        </span>
+                        <span className={`status-badge status-badge--${statusColor}`} style={{ fontSize: 10, padding: '2px 6px' }}>
+                          {formatOrderStatus(ev.status as OrderStatus)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#475569' }}>
+                        {ev.note || `Transitioned by ${ev.changedByName}`}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
+                        {new Date(ev.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · {ev.changedByName}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: '#475569' }}>
-                      {ev.note || `Transitioned by ${ev.changedByName}`}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
-                      {new Date(ev.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · {ev.changedByName}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              {(data?.recentEvents || []).length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setEventsExpanded(!eventsExpanded)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: '#FAF8F5',
+                    color: '#0E7490',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                    marginTop: 12,
+                    borderRadius: 2,
+                    textAlign: 'center',
+                    transition: 'background 0.15s ease',
+                  }}
+                >
+                  {eventsExpanded
+                    ? '▲ Collapse to 3 Events'
+                    : `▼ View More (${(data?.recentEvents?.length || 0) - 3} more events)`}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
