@@ -4,7 +4,7 @@ import { updateOrderStatusSchema } from '@/lib/validators/orders';
 import { canPerformTransition } from '@/lib/orders/status-machine';
 import { dispatchOrderStatusNotification, dispatchDiscrepancyNotification } from '@/lib/notifications/dispatcher';
 import { refundPayment } from '@/lib/payments/paymongo';
-import { getWashRecommendation } from '@/lib/ai/wash-recommendation';
+import { getAiWashRecommendation } from '@/lib/ai/wash-recommendation';
 import type { UserRole, OrderStatus } from '@/lib/types';
 
 /**
@@ -186,7 +186,7 @@ export async function PATCH(
         const fabricType = intake.fabric_types?.[0] || 'cotton';
         const colorCat = intake.color_categories?.[0] || 'mixed';
 
-        const recommendation = getWashRecommendation({
+        const recommendation = await getAiWashRecommendation({
           clothing_type: clothingType,
           fabric_type: fabricType,
           color_category: colorCat,
