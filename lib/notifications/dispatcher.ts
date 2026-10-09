@@ -147,7 +147,7 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
   if (status === 'picked_up') {
     (async () => {
       try {
-        const { sendPickupConfirmationEmail } = await import('@/lib/email/sender');
+        const { sendPickupConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
         const serviceClient = createServiceClient();
         const { data: customer } = await serviceClient
           .from('users')
@@ -162,7 +162,7 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
           .single();
 
         if (customer?.email) {
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const appUrl = getAppBaseUrl();
           const trackingUrl = `${appUrl}/customer/orders/${orderId}`;
           await sendPickupConfirmationEmail({
             customerName: customer.full_name || 'Valued Customer',

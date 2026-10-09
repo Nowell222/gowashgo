@@ -72,9 +72,10 @@ export default function ManagerInvitesPage() {
 
       const inviteUrl = `${window.location.origin}/invite/${json.data.code}`;
       if (json.data?.email_sent) {
-        setSuccess(`✓ Invitation email sent to ${newEmail}! Recipient can activate their account via email.`);
+        setSuccess(`✓ Official onboarding invitation email delivered to ${newEmail}! Candidate can activate directly from their inbox.`);
       } else {
-        setSuccess(`Invite generated for ${newEmail}. Share link: ${inviteUrl}`);
+        const errorDetail = json.data?.email_error ? `(${json.data.email_error})` : '';
+        setSuccess(`Invite code generated: ${json.data.code}. Note: Email delivery ${errorDetail || 'did not complete'}. Direct link: ${inviteUrl}`);
       }
       setNewEmail('');
       loadInvites();
@@ -82,6 +83,63 @@ export default function ManagerInvitesPage() {
       setError('Network error creating invite');
       setCreating(false);
     }
+  }
+
+  const [resendingCode, setResendingCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ code: string; message: string; isError?: boolean } | null>(null);
+
+  async function handleResendInvite(code: string, currentEmail?: string | null) {
+    let emailToSend = currentEmail;
+    if (!emailToSend) {
+      const entered = window.prompt('Enter candidate email address to send the invitation to:');
+      if (!entered || !entered.trim()) return;
+      emailToSend = entered.trim();
+    }
+
+    setResendingCode(code);
+    setActionFeedback(null);
+
+    try {
+      const res = await fetch(`/api/invites/${code}/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToSend }),
+      });
+
+      const json = await res.json();
+      setResendingCode(null);
+
+      if (!res.ok) {
+        setActionFeedback({
+          code,
+          message: json.error?.message || 'Failed to resend email',
+          isError: true,
+        });
+        return;
+      }
+
+      setActionFeedback({
+        code,
+        message: `✓ Email invite successfully sent to ${json.data.email} via ${json.data.provider.toUpperCase()}!`,
+        isError: false,
+      });
+      loadInvites();
+    } catch (err: any) {
+      setResendingCode(null);
+      setActionFeedback({
+        code,
+        message: err.message || 'Network error resending email',
+        isError: true,
+      });
+    }
+  }
+
+  function handleCopyLink(code: string) {
+    const url = `${window.location.origin}/invite/${code}`;
+    navigator.clipboard.writeText(url);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2500);
   }
 
   const pendingInvites = invites.filter((i) => i.status === 'pending');
@@ -256,6 +314,20 @@ export default function ManagerInvitesPage() {
           Real-time tracking of sent recruitment email invites and activation dates.
         </p>
 
+        {actionFeedback && (
+          <div
+            style={{
+              padding: '10px 14px',
+              fontSize: 13,
+              marginBottom: 14,
+              background: actionFeedback.isError ? '#FEF2F2' : '#ECFDF5',
+              color: actionFeedback.isError ? '#991B1B' : '#065F46',
+            }}
+          >
+            {actionFeedback.message}
+          </div>
+        )}
+
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[1, 2, 3].map((i) => (
@@ -275,7 +347,8 @@ export default function ManagerInvitesPage() {
                   <th style={{ padding: '8px 12px', fontWeight: 700 }}>Assigned Role</th>
                   <th style={{ padding: '8px 12px', fontWeight: 700 }}>Candidate Email</th>
                   <th style={{ padding: '8px 12px', fontWeight: 700 }}>Invite Status</th>
-                  <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Expires On</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Expires On</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,12 +390,53 @@ export default function ManagerInvitesPage() {
                         {inv.status === 'used' ? '✓ Activated' : inv.status === 'expired' ? 'Expired' : 'Pending Activation'}
                       </span>
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: 12, color: '#64748B' }}>
+                    <td style={{ padding: '10px 12px', fontSize: 12, color: '#64748B' }}>
                       {new Date(inv.expires_at).toLocaleDateString('en-PH', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                        {inv.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => handleResendInvite(inv.code, inv.email)}
+                            disabled={resendingCode === inv.code}
+                            style={{
+                              background: '#0E7490',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '5px 10px',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                              cursor: resendingCode === inv.code ? 'not-allowed' : 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {resendingCode === inv.code ? 'Resending...' : 'Resend Email'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(inv.code)}
+                          style={{
+                            background: '#F1F5F9',
+                            color: '#0F172A',
+                            border: 'none',
+                            padding: '5px 10px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {copiedCode === inv.code ? '✓ Copied' : 'Copy Link'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

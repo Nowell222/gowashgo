@@ -22,17 +22,46 @@ interface SendEmailResult {
   error?: string;
 }
 
+// Default verified fallback credentials for GoWashGo deployment
+const DEFAULT_SMTP_HOST = 'smtp.gmail.com';
+const DEFAULT_SMTP_PORT = 587;
+const DEFAULT_SMTP_USER = 'nowellandal71@gmail.com';
+const DEFAULT_SMTP_PASS = 'dubkdbpxtcypluoj';
+const DEFAULT_FROM = 'nowellandal71@gmail.com';
+
+/**
+ * Resolve the dynamic application base URL for links embedded in emails.
+ */
+export function getAppBaseUrl(request?: Request): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  }
+  if (request) {
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'https://gowashgo.vercel.app';
+}
+
 /**
  * Universal email sender:
- * 1. Uses Brevo REST API v3 as primary transactional provider.
- * 2. Automatically falls back to verified Gmail SMTP if Brevo encounters an issue.
+ * 1. Uses Brevo REST API v3 as primary transactional provider (if configured in environment).
+ * 2. Automatically falls back to verified Gmail SMTP which delivers reliably across all serverless environments.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const { to, toName, subject, html } = options;
 
   const brevoApiKey = process.env.BREVO_API_KEY;
-  const fromEmail = process.env.SMTP_FROM || 'nowellandal71@gmail.com';
+  const fromEmail = process.env.SMTP_FROM || DEFAULT_FROM;
   const fromName = 'GoWashGo Laundry';
+
+  let brevoFailedReason = '';
 
   // -------------------------------------------------------------
   // 1. Try Brevo REST API (Transactional Email v3)
@@ -73,19 +102,21 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         };
       }
 
-      console.warn('[Brevo API Warning] Non-OK response, falling back to Gmail SMTP:', data);
+      brevoFailedReason = data.message || `HTTP ${response.status}`;
+      console.warn('[Brevo API Warning] Brevo response failed, immediately falling back to Gmail SMTP:', brevoFailedReason);
     } catch (err: any) {
-      console.warn('[Brevo API Error] Request failed, falling back to Gmail SMTP:', err.message);
+      brevoFailedReason = err.message || 'Network error';
+      console.warn('[Brevo API Error] Request failed, immediately falling back to Gmail SMTP:', brevoFailedReason);
     }
   }
 
   // -------------------------------------------------------------
-  // 2. Fallback to Gmail SMTP via Nodemailer
+  // 2. Reliable Fallback to Gmail SMTP via Nodemailer
   // -------------------------------------------------------------
-  const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
-  const smtpUser = process.env.SMTP_USER || 'nowellandal71@gmail.com';
-  const smtpPass = process.env.SMTP_PASS;
+  const smtpHost = process.env.SMTP_HOST || DEFAULT_SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || String(DEFAULT_SMTP_PORT), 10);
+  const smtpUser = process.env.SMTP_USER || DEFAULT_SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS || DEFAULT_SMTP_PASS;
 
   if (smtpUser && smtpPass) {
     try {
@@ -117,7 +148,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       return {
         success: false,
         provider: 'none',
-        error: smtpErr.message,
+        error: `Brevo: ${brevoFailedReason || 'skipped'} | SMTP: ${smtpErr.message}`,
       };
     }
   }

@@ -131,8 +131,8 @@ export async function POST(request: Request) {
     if (isPaid && recipientEmail) {
       (async () => {
         try {
-          const { sendPaymentConfirmationEmail } = await import('@/lib/email/sender');
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+          const appUrl = getAppBaseUrl(request);
           const receiptUrl = `${appUrl}/customer/orders/${order.id}`;
           await sendPaymentConfirmationEmail({
             customerName: user.user_metadata?.full_name || recipientEmail.split('@')[0],

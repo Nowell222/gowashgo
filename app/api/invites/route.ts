@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     if (email && email.trim()) {
       try {
-        const { sendTeamInviteEmail } = await import('@/lib/email/sender');
+        const { sendTeamInviteEmail, getAppBaseUrl } = await import('@/lib/email/sender');
         const { data: branchData } = await supabase
           .from('branches')
           .select('name')
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
         const branchName = branchData?.name || 'San Juan Batangas Hub';
         const inviterName = (profile as any)?.full_name || 'Branch Manager';
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const appUrl = getAppBaseUrl(request);
         const inviteUrl = `${appUrl}/invite/${code}`;
 
         const sendResult = await sendTeamInviteEmail({

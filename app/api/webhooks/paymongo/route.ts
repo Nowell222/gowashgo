@@ -78,8 +78,8 @@ export async function POST(request: Request) {
             if (customerObj?.email) {
               (async () => {
                 try {
-                  const { sendPaymentConfirmationEmail } = await import('@/lib/email/sender');
-                  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                  const { sendPaymentConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+                  const appUrl = getAppBaseUrl(request);
                   await sendPaymentConfirmationEmail({
                     customerName: customerObj.full_name || 'Customer',
                     orderNumber: order.order_number,
