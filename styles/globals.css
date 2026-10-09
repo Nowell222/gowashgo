@@ -3,7 +3,7 @@
    ============================================================ */
 
 /* ---------- Google Fonts (Distinctive Laundry Aesthetic + Editorial Serif) ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500;1,6..72,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500;1,6..72,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 
 
 /* ---------- CSS Reset ---------- */
@@ -112,7 +112,9 @@ ul, ol {
   --overlay-bg: rgba(15, 23, 42, 0.4);
 
   /* — Typography — */
-  --font-body: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Space Grotesk', -apple-system, sans-serif;
+  --font-karla: 'Karla', sans-serif;
+  --font-body: 'Karla', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --text-xs: 0.75rem;     /* 12px */

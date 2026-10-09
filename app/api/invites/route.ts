@@ -74,16 +74,54 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (insertError) {
-      console.error('Invite creation error:', insertError);
-      return NextResponse.json(
-        { error: { code: 'CREATE_FAILED', message: 'Failed to create invite' } },
-        { status: 500 }
-      );
+    // Send transactional invitation email if recipient email was provided
+    let emailSent = false;
+    let emailProvider: string | null = null;
+    let emailError: string | null = null;
+
+    if (email && email.trim()) {
+      try {
+        const { sendTeamInviteEmail } = await import('@/lib/email/sender');
+        const { data: branchData } = await supabase
+          .from('branches')
+          .select('name')
+          .eq('id', branch_id)
+          .single();
+
+        const branchName = branchData?.name || 'San Juan Batangas Hub';
+        const inviterName = (profile as any)?.full_name || 'Branch Manager';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const inviteUrl = `${appUrl}/invite/${code}`;
+
+        const sendResult = await sendTeamInviteEmail({
+          recipientEmail: email.trim(),
+          role: targetRole,
+          branchName,
+          inviterName,
+          inviteCode: code,
+          inviteUrl,
+        }, email.trim());
+
+        emailSent = sendResult.success;
+        emailProvider = sendResult.provider;
+        if (!sendResult.success) {
+          emailError = sendResult.error || 'Failed to dispatch email';
+        }
+      } catch (err: any) {
+        console.error('[Invites API] Failed to send invite email:', err);
+        emailError = err.message;
+      }
     }
 
     return NextResponse.json(
-      { data: invite },
+      {
+        data: {
+          ...invite,
+          email_sent: emailSent,
+          email_provider: emailProvider,
+          email_error: emailError,
+        },
+      },
       { status: 201 }
     );
   } catch (err) {

@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         if (orderId) {
           const { data: order } = await serviceClient
             .from('orders')
-            .select('customer_id, order_number, total')
+            .select('customer_id, order_number, total, customer:users(email, full_name)')
             .eq('id', orderId)
             .single();
 
@@ -72,6 +72,27 @@ export async function POST(request: Request) {
               title: 'Payment Received ✅',
               body: `We have received your payment of ${formatPeso(order.total)} for order ${order.order_number}.`,
             }).catch(() => {});
+
+            // Send transactional payment confirmation email
+            const customerObj = Array.isArray(order.customer) ? order.customer[0] : (order.customer as any);
+            if (customerObj?.email) {
+              (async () => {
+                try {
+                  const { sendPaymentConfirmationEmail } = await import('@/lib/email/sender');
+                  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                  await sendPaymentConfirmationEmail({
+                    customerName: customerObj.full_name || 'Customer',
+                    orderNumber: order.order_number,
+                    amountCentavos: order.total,
+                    paymentMethod: 'ONLINE (PAYMONGO)',
+                    paidAt: new Date().toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    receiptUrl: `${appUrl}/customer/orders/${orderId}`,
+                  }, customerObj.email);
+                } catch (emailErr) {
+                  console.error('[PayMongo Webhook] Failed to send receipt email:', emailErr);
+                }
+              })();
+            }
           }
         }
       }

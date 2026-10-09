@@ -143,6 +143,43 @@ export async function dispatchOrderStatusNotification(options: OrderStatusNotifi
       return;
   }
 
+  // Trigger transactional pickup confirmation email via Brevo / SMTP
+  if (status === 'picked_up') {
+    (async () => {
+      try {
+        const { sendPickupConfirmationEmail } = await import('@/lib/email/sender');
+        const serviceClient = createServiceClient();
+        const { data: customer } = await serviceClient
+          .from('users')
+          .select('email, full_name')
+          .eq('id', customerId)
+          .single();
+
+        const { data: orderDetails } = await serviceClient
+          .from('orders')
+          .select('pickup_address, weight_kg, total')
+          .eq('id', orderId)
+          .single();
+
+        if (customer?.email) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const trackingUrl = `${appUrl}/customer/orders/${orderId}`;
+          await sendPickupConfirmationEmail({
+            customerName: customer.full_name || 'Valued Customer',
+            orderNumber,
+            weightKg: orderDetails?.weight_kg || null,
+            totalCentavos: orderDetails?.total || null,
+            riderName: riderName || 'GoWashGo Rider',
+            pickupAddress: orderDetails?.pickup_address || 'Customer doorstep',
+            trackingUrl,
+          }, customer.email);
+        }
+      } catch (emailErr) {
+        console.error('[Dispatcher] Failed to send pickup confirmation email:', emailErr);
+      }
+    })();
+  }
+
   return dispatchNotification({
     userId: customerId,
     orderId,

@@ -26,21 +26,18 @@
 }
 
 .btn--primary {
-  background: linear-gradient(135deg, #0284C7, #0369A1);
+  background: #0E7490;
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
-  border: 1px solid rgba(2, 132, 199, 0.3);
+  border: none;
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0369A1, #075985);
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
-  transform: translateY(-1px);
+  background: #0C627A;
 }
 
 .btn--primary:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.2);
+  background: #155E75;
 }
 
 .btn--secondary {
@@ -181,24 +178,15 @@
 /* ---------- Cards ---------- */
 .card {
   background: #FFFFFF;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
+  border: none;
+  border-radius: 2px;
+  padding: 16px 20px;
+  box-shadow: none;
   transition: all var(--transition-fast);
 }
 
 .card--interactive:hover {
-  border-color: #BAE6FD;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.card--glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-color: var(--glass-border);
+  background: #F8FAFC;
 }
 
 .card__header {
@@ -403,9 +391,9 @@
 .table-container {
   overflow-x: auto;
   background: #FFFFFF;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .table {

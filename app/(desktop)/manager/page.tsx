@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { formatPeso } from '@/lib/utils/currency';
+import {
+  MachineDrumIcon,
+  BasketIcon,
+  ScaleIcon,
+  ScooterCourierIcon,
+  ReceiptTicketIcon,
+  CheckmarkBadgeIcon,
+  CareTagIcon,
+  AlertFlagIcon,
+} from '@/components/icons';
 import type { User, Branch, OrderWithDetails } from '@/lib/types';
 
 interface DailyReportRow {
@@ -131,7 +141,7 @@ export default function ManagerDashboardPage() {
     }
   }
 
-  // Tier B5: Daily aggregation for revenue report
+  // Daily aggregation for revenue report
   const dailyReportMap = new Map<string, DailyReportRow>();
   for (const o of orders) {
     const d = new Date(o.created_at).toISOString().split('T')[0];
@@ -162,7 +172,7 @@ export default function ManagerDashboardPage() {
 
   const dailyReportRows = Array.from(dailyReportMap.values()).sort((a, b) => b.date.localeCompare(a.date));
 
-  // Client-Side CSV Export (Tier B5)
+  // Client-Side CSV Export
   function handleExportCsv() {
     if (dailyReportRows.length === 0) {
       alert('No data to export');
@@ -191,127 +201,327 @@ export default function ManagerDashboardPage() {
     document.body.removeChild(link);
   }
 
+  // Key operations calculations
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayOrders = orders.filter((o) => o.created_at.startsWith(todayStr));
   const completedOrders = orders.filter((o) => ['delivered', 'completed'].includes(o.status));
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
-  const activeOrders = orders.filter((o) => !['delivered', 'completed', 'cancelled'].includes(o.status));
+  const activeFacilityOrders = orders.filter((o) => ['at_facility', 'washing', 'drying', 'folding'].includes(o.status));
+
+  const totalRealizedRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalWeightKgDelivered = completedOrders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
+
+  // Unreconciled courier cash calculations (The Top Highlight metric!)
+  const unremittedSettlements = riderSettlements.filter((r) => !r.isSettled && r.cashCollected > 0);
+  const totalUnremittedCash = unremittedSettlements.reduce((sum, r) => sum + r.cashCollected, 0);
 
   return (
-    <div className="desktop-content fade-in">
-      {/* Heading */}
-      <div className="page-heading">
-        <div className="page-heading__text">
-          <h1 className="page-heading__title">
-            {branch ? branch.name : 'Branch Hub'}
-          </h1>
-          <p className="page-heading__subtitle">
-            Welcome back, {user?.full_name || 'Manager'}. Supervise live orders, cash reconciliation, and volume reports.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={handleExportCsv}
-          >
-            📥 Export CSV Report
-          </button>
-          <Link href="/manager/orders" className="btn btn--primary">
-            Manage Orders →
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats Grid with Tier B2 Rating Card */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <div className="stat-card">
-          <div className="stat-card__label">Total Orders Processed</div>
-          <div className="stat-card__value">{orders.length}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__label">Realized Revenue</div>
-          <div className="stat-card__value" style={{ color: '#059669' }}>
-            {formatPeso(totalRevenue)}
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__label">Active In-Pipeline</div>
-          <div className="stat-card__value" style={{ color: '#0284C7' }}>
-            {activeOrders.length}
-          </div>
-        </div>
-        {/* Tier B2: Branch Customer Rating */}
-        <div className="stat-card" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-          <div className="stat-card__label" style={{ color: '#92400E' }}>⭐ Branch Customer Rating</div>
-          <div className="stat-card__value" style={{ color: '#B45309' }}>
-            {averageRating ? `${averageRating.toFixed(1)} / 5.0` : '5.0 ★'}
-          </div>
-          <div style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
-            {totalRatingsCount > 0 ? `${totalRatingsCount} customer reviews` : 'Awaiting first customer review'}
-          </div>
-        </div>
-      </div>
-
-      {/* ================= TIER B1: Rider Shift Cash Reconciliation Checklist ================= */}
-      <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
-        <div className="card__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div
+      style={{
+        padding: '16px 20px 40px',
+        maxWidth: 1400,
+        margin: '0 auto',
+        fontFamily: 'var(--font-karla, "Karla", sans-serif)',
+        color: '#0F172A',
+      }}
+    >
+      {/* ========================================================================= */}
+      {/* TOP HIGHLIGHT: SINGLE MOST IMPORTANT NUMBER IN FLAT AMBER BLOCK           */}
+      {/* (UNREMITTED COURIER CASH HANDOVER FOR SHIFT CLOSEOUT)                    */}
+      {/* ========================================================================= */}
+      <div
+        style={{
+          background: '#FEF3C7',
+          padding: '20px 24px',
+          marginBottom: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <h2 className="card__title" style={{ fontSize: 16 }}>💵 Rider Cash Reconciliation (Today)</h2>
-            <p style={{ fontSize: 12, color: '#64748B', margin: 0 }}>
-              Verify and reconcile collected Cash on Delivery (COD) handovers from active couriers.
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#92400E',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                marginBottom: 4,
+              }}
+            >
+              COURIER CASH RECONCILIATION · SHIFT HANDOVER
+            </div>
+            <div
+              style={{
+                fontSize: 'clamp(28px, 3.5vw, 38px)',
+                fontWeight: 700,
+                color: '#78350F',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              {formatPeso(totalUnremittedCash)} Unremitted Courier Cash
+            </div>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: '#92400E',
+                marginTop: 4,
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              {unremittedSettlements.length} active couriers pending COD drawer handover today
+            </div>
+          </div>
+
+          {/* Quick shop actions */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              style={{
+                background: '#FFFFFF',
+                color: '#78350F',
+                padding: '10px 16px',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              Export CSV Ledger
+            </button>
+            <Link
+              href="/manager/orders"
+              style={{
+                background: '#78350F',
+                color: '#FFFFFF',
+                padding: '10px 18px',
+                fontSize: 12,
+                fontWeight: 700,
+                textDecoration: 'none',
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              }}
+            >
+              Manage Orders →
+            </Link>
+          </div>
+        </div>
+
+        {/* Operating subtitle */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 12,
+            color: '#92400E',
+            fontWeight: 600,
+            paddingTop: 8,
+          }}
+        >
+          <ScaleIcon size={14} color="#92400E" />
+          <span>Hub: {branch ? branch.name : 'San Juan Batangas Hub'}. Doorstep weights pre-weighed on rider calibrated scale. Reconcile cash handover with courier trip records below.</span>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4 COMPACT FLAT STAT BLOCKS (ZERO BORDERS, NO GLASS, NO ICONS IN CIRCLES)  */}
+      {/* ========================================================================= */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        {/* Block 1 */}
+        <div style={{ background: '#FFFFFF', padding: '16px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Delivered Revenue
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: '#0F172A',
+              margin: '4px 0 2px',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            }}
+          >
+            {formatPeso(totalRealizedRevenue)}
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            {completedOrders.length} orders completed
+          </div>
+        </div>
+
+        {/* Block 2 */}
+        <div style={{ background: '#ECFEFF', padding: '16px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#0E7490', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Total Weight Washed
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: '#164E63',
+              margin: '4px 0 2px',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            }}
+          >
+            {totalWeightKgDelivered.toFixed(1)} kg
+          </div>
+          <div style={{ fontSize: 12, color: '#0E7490' }}>
+            Across all verified batches
+          </div>
+        </div>
+
+        {/* Block 3 */}
+        <div style={{ background: '#FFFFFF', padding: '16px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Active In-Facility Queue
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: '#0F172A',
+              margin: '4px 0 2px',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            }}
+          >
+            {activeFacilityOrders.length} Bags
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            In wash, dry or fold stage
+          </div>
+        </div>
+
+        {/* Block 4 */}
+        <div style={{ background: '#FFFFFF', padding: '16px 18px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Branch Service Rating
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: '#B45309',
+              margin: '4px 0 2px',
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            }}
+          >
+            {averageRating ? `${averageRating.toFixed(1)} / 5.0` : '5.0 / 5.0'}
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B' }}>
+            {totalRatingsCount > 0 ? `${totalRatingsCount} verified customer ratings` : 'Awaiting new ratings'}
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* COURIER CASH HANDOVER TABLE (FLAT BLOCKS, COMPACT, REAL OPERATION)        */}
+      {/* ========================================================================= */}
+      <div style={{ background: '#FFFFFF', padding: '18px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <h2
+              style={{
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                fontSize: 16,
+                fontWeight: 700,
+                margin: 0,
+                color: '#0F172A',
+              }}
+            >
+              Courier Shift Cash Reconciliation
+            </h2>
+            <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>
+              Confirm Cash on Delivery (COD) envelope handovers from field couriers before shift closeout.
             </p>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', fontFamily: 'var(--font-mono, monospace)' }}>
+            DATE: {todayStr}
           </div>
         </div>
 
         {riderSettlements.length === 0 ? (
-          <div className="empty-state" style={{ padding: 'var(--space-6) 0' }}>
-            <p className="empty-state__description">No active delivery couriers found.</p>
+          <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748B', fontSize: 13 }}>
+            No couriers assigned to this facility today.
           </div>
         ) : (
-          <div className="table-container">
-            <table className="table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr>
-                  <th>Rider Name</th>
-                  <th>Contact</th>
-                  <th>Completed Deliveries</th>
-                  <th>Cash Collected</th>
-                  <th>Handover Status</th>
-                  <th>Action</th>
+                <tr style={{ background: '#F8FAFC', textAlign: 'left', color: '#64748B', fontSize: 11, textTransform: 'uppercase' }}>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Courier Name</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Mobile Contact</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Delivered Drops</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Cash Collected</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Handover Status</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Shift Action</th>
                 </tr>
               </thead>
               <tbody>
                 {riderSettlements.map((r) => (
-                  <tr key={r.riderId}>
-                    <td>
-                      <strong style={{ color: '#0F172A' }}>{r.riderName}</strong>
+                  <tr key={r.riderId} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, color: '#0F172A' }}>
+                      {r.riderName}
                     </td>
-                    <td style={{ fontSize: 12, color: '#64748B' }}>{r.phone || '—'}</td>
-                    <td>{r.completedCount} orders</td>
-                    <td style={{ fontWeight: 700, color: '#15803D', fontSize: 14 }}>
+                    <td style={{ padding: '10px 12px', color: '#64748B', fontSize: 12 }}>
+                      {r.phone || '—'}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <strong>{r.completedCount}</strong> drops
+                    </td>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: r.cashCollected > 0 ? '#15803D' : '#64748B',
+                        fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                      }}
+                    >
                       {formatPeso(r.cashCollected)}
                     </td>
-                    <td>
-                      <span style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: 4,
-                        background: r.isSettled ? '#ECFDF5' : r.cashCollected > 0 ? '#FEF3C7' : '#F1F5F9',
-                        color: r.isSettled ? '#065F46' : r.cashCollected > 0 ? '#92400E' : '#64748B',
-                      }}>
-                        {r.isSettled ? '✓ Handed Over' : r.cashCollected > 0 ? '⏳ Pending Handover' : 'No Cash'}
+                    <td style={{ padding: '10px 12px' }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          background: r.isSettled ? '#ECFDF5' : r.cashCollected > 0 ? '#FEF3C7' : '#F1F5F9',
+                          color: r.isSettled ? '#065F46' : r.cashCollected > 0 ? '#92400E' : '#64748B',
+                          fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                        }}
+                      >
+                        {r.isSettled ? '✓ Handed Over' : r.cashCollected > 0 ? 'Pending Handover' : 'No Cash'}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                       {!r.isSettled && r.cashCollected > 0 ? (
                         <button
                           type="button"
-                          className="btn btn--primary btn--sm"
                           disabled={settlingRiderId === r.riderId}
                           onClick={() => handleSettleCash(r.riderId, r.cashCollected, r.completedCount)}
-                          style={{ fontSize: 11, padding: '4px 10px' }}
+                          style={{
+                            background: '#0E7490',
+                            color: '#FFFFFF',
+                            padding: '6px 14px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                            cursor: settlingRiderId === r.riderId ? 'not-allowed' : 'pointer',
+                          }}
                         >
-                          {settlingRiderId === r.riderId ? 'Saving...' : '✓ Confirm Handover'}
+                          {settlingRiderId === r.riderId ? 'Recording...' : '✓ Confirm Handover'}
                         </button>
                       ) : (
                         <span style={{ fontSize: 12, color: '#94A3B8' }}>—</span>
@@ -325,56 +535,98 @@ export default function ManagerDashboardPage() {
         )}
       </div>
 
-      {/* ================= TIER B5: Daily Volume & Revenue Report Table ================= */}
-      <div className="card">
-        <div className="card__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ========================================================================= */}
+      {/* DAILY VOLUME & REVENUE REPORT TABLE (FLAT, NO BORDERS)                     */}
+      {/* ========================================================================= */}
+      <div style={{ background: '#FFFFFF', padding: '18px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
-            <h2 className="card__title" style={{ fontSize: 16 }}>📊 Daily Revenue &amp; Volume Report</h2>
-            <p style={{ fontSize: 12, color: '#64748B', margin: 0 }}>
-              Track day-over-day financial throughput, digital scale weights, and payment breakdown.
+            <h2
+              style={{
+                fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                fontSize: 16,
+                fontWeight: 700,
+                margin: 0,
+                color: '#0F172A',
+              }}
+            >
+              Day-over-Day Volume &amp; Revenue Ledger
+            </h2>
+            <p style={{ fontSize: 12, color: '#64748B', margin: '2px 0 0' }}>
+              Historical throughput tracking verified scale weights, COD payments, and online earnings.
             </p>
           </div>
           <button
             type="button"
-            className="btn btn--secondary btn--sm"
             onClick={handleExportCsv}
+            style={{
+              background: '#ECFEFF',
+              color: '#0E7490',
+              padding: '6px 12px',
+              fontSize: 11,
+              fontWeight: 700,
+              fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+              cursor: 'pointer',
+            }}
           >
-            📥 Download CSV
+            Download CSV
           </button>
         </div>
 
         {dailyReportRows.length === 0 ? (
-          <div className="empty-state" style={{ padding: 'var(--space-6) 0' }}>
-            <p className="empty-state__description">No financial records yet.</p>
+          <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748B', fontSize: 13 }}>
+            No financial history recorded yet.
           </div>
         ) : (
-          <div className="table-container">
-            <table className="table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Total Orders</th>
-                  <th>Completed</th>
-                  <th>Verified Weight</th>
-                  <th>Cash Received</th>
-                  <th>Online Received</th>
-                  <th>Total Revenue</th>
+                <tr style={{ background: '#F8FAFC', textAlign: 'left', color: '#64748B', fontSize: 11, textTransform: 'uppercase' }}>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Date</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Total Bags</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Completed</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Verified Weight</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Cash Received</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700 }}>Online Received</th>
+                  <th style={{ padding: '8px 12px', fontWeight: 700, textAlign: 'right' }}>Total Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {dailyReportRows.map((row) => (
-                  <tr key={row.date}>
-                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                  <tr key={row.date} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'var(--font-mono, monospace)' }}>
                       {new Date(row.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td>{row.totalOrders}</td>
-                    <td>
-                      <span className="status-badge status-badge--success">{row.completedOrders} completed</span>
+                    <td style={{ padding: '10px 12px' }}>{row.totalOrders}</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          background: '#ECFDF5',
+                          color: '#065F46',
+                          fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                        }}
+                      >
+                        {row.completedOrders} completed
+                      </span>
                     </td>
-                    <td>{row.totalWeightKg > 0 ? `${row.totalWeightKg.toFixed(1)} kg` : '—'}</td>
-                    <td>{formatPeso(row.cashRevenue)}</td>
-                    <td>{formatPeso(row.onlineRevenue)}</td>
-                    <td style={{ fontWeight: 800, color: '#0284C7', fontSize: 14 }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>
+                      {row.totalWeightKg > 0 ? `${row.totalWeightKg.toFixed(1)} kg` : '—'}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: '#64748B' }}>{formatPeso(row.cashRevenue)}</td>
+                    <td style={{ padding: '10px 12px', color: '#64748B' }}>{formatPeso(row.onlineRevenue)}</td>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: '#0E7490',
+                        textAlign: 'right',
+                        fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+                      }}
+                    >
                       {formatPeso(row.totalRevenue)}
                     </td>
                   </tr>
