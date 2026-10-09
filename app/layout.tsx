@@ -17,8 +17,8 @@ export const metadata: Metadata = {
     title: 'WashGo',
   },
   icons: {
-    icon: '/icons/icon.svg',
-    apple: '/icons/icon.svg',
+    icon: '/icons/gowashgo-icon.png',
+    apple: '/icons/gowashgo-icon.png',
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
 };
@@ -36,7 +36,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/icons/gowashgo-icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icons/gowashgo-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

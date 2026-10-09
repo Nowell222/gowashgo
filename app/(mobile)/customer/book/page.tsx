@@ -14,7 +14,7 @@ function BookingForm() {
   const reorderId = searchParams.get('reorder_id');
 
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>('00000000-0000-0000-0000-000000000001');
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
 
   // Addresses & Schedule
   const [pickupAddress, setPickupAddress] = useState('Katipunan Ave, Quezon City, Metro Manila');
@@ -52,7 +52,12 @@ function BookingForm() {
         const branchJson = await branchRes.json();
         if (branchJson.data && branchJson.data.length > 0) {
           setBranches(branchJson.data);
-          setSelectedBranchId((prev) => prev || branchJson.data[0].id);
+          setSelectedBranchId((prev) => {
+            if (prev && branchJson.data.some((b: any) => b.id === prev)) {
+              return prev;
+            }
+            return branchJson.data[0].id;
+          });
         }
 
         const addrJson = await addrRes.json();

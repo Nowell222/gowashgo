@@ -110,9 +110,9 @@ export default function RegisterPage() {
   return (
     <div className="auth-card">
       <div className="auth-card__logo">
-        <div className="auth-card__logo-icon">W</div>
+        <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain', margin: '0 auto 10px' }} />
         <h1 className="auth-card__logo-title">
-          <span className="gradient-text">WashGo</span>
+          <span className="gradient-text">GoWashGo</span>
         </h1>
         <p className="auth-card__logo-subtitle">Create your account</p>
       </div>

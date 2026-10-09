@@ -48,9 +48,9 @@ export default function DesktopLayout({ children }: { children: React.ReactNode 
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar__brand">
-          <div className="sidebar__brand-icon">W</div>
+          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={34} height={34} style={{ borderRadius: 8, objectFit: 'contain' }} />
           <div>
-            <div className="sidebar__brand-name">WashGo</div>
+            <div className="sidebar__brand-name">GoWashGo</div>
             {role && (
               <div className="sidebar__brand-role">{ROLE_LABELS[role]}</div>
             )}

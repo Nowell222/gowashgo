@@ -92,6 +92,9 @@ function LoginForm() {
 
   return (
     <>
+      <div style={{ textAlign: 'center', marginBottom: 14 }}>
+        <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={52} height={52} style={{ borderRadius: 12, objectFit: 'contain' }} />
+      </div>
       <h2 className="auth-card__heading">Welcome back</h2>
       <p className="auth-card__subheading">Sign in to your account to continue</p>
 

@@ -266,6 +266,33 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
+      {/* Pickup Navigation Box (if rider_assigned) */}
+      {order.status === 'rider_assigned' && (
+        <div className="flat-block flat-block--linen" style={{ padding: '16px' }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#1C1917', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.DeliveryScooter size={18} color="#0E7490" />
+            Pickup Assignment Ready
+          </h3>
+          <p style={{ fontSize: 12, color: '#78716C', marginBottom: 14 }}>
+            Start GPS tracking and navigate to the customer&apos;s doorstep for pickup.
+          </p>
+          <button
+            type="button"
+            className="btn btn--primary btn--lg btn--full"
+            disabled={updating}
+            onClick={() => handleAdvanceStatus('pickup_en_route')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            {updating ? <span className="btn__spinner" /> : (
+              <>
+                <LaundryIcons.DeliveryScooter size={20} color="#FFFFFF" />
+                Start Pickup Navigation
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Doorstep Portable Scale Weigh-in Box (if pickup_en_route) */}
       {order.status === 'pickup_en_route' && (
         <div className="flat-block flat-block--amber" style={{ padding: '16px' }}>
@@ -344,6 +371,60 @@ export default function RiderOrderDetailPage({ params }: { params: Promise<{ id:
             onClick={() => handleAdvanceStatus('picked_up')}
           >
             {updating ? <span className="btn__spinner" /> : `Confirm ${parsedScaleWeight.toFixed(1)}kg (${formatPeso(liveComputedTotal)}) & Pickup ✓`}
+          </button>
+        </div>
+      )}
+
+      {/* Arrived at Hub / Drop Off Box (if picked_up) */}
+      {order.status === 'picked_up' && (
+        <div className="flat-block flat-block--teal" style={{ padding: '16px' }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#0E7490', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.CheckmarkBadge size={18} color="#0E7490" />
+            Laundry Picked Up {order.weight_kg ? `(${order.weight_kg} kg)` : ''}
+          </h3>
+          <p style={{ fontSize: 12, color: '#0891B2', marginBottom: 14 }}>
+            Proceed to the laundry facility to deposit the laundry bag for washing &amp; processing.
+          </p>
+          <button
+            type="button"
+            className="btn btn--primary btn--lg btn--full"
+            disabled={updating}
+            onClick={() => handleAdvanceStatus('at_facility')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#0E7490' }}
+          >
+            {updating ? <span className="btn__spinner" /> : (
+              <>
+                <LaundryIcons.Washer size={20} color="#FFFFFF" />
+                Arrived at Hub / Drop Off at Facility
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Ready for Delivery Box (if ready_for_delivery) */}
+      {order.status === 'ready_for_delivery' && (
+        <div className="flat-block flat-block--linen" style={{ padding: '16px' }}>
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 800, color: '#1C1917', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <LaundryIcons.Sparkles size={18} color="#D97706" />
+            Laundry Fresh &amp; Ready for Delivery
+          </h3>
+          <p style={{ fontSize: 12, color: '#78716C', marginBottom: 14 }}>
+            Clean garments are packed at the hub. Collect the bundle and start delivery to the customer.
+          </p>
+          <button
+            type="button"
+            className="btn btn--primary btn--lg btn--full"
+            disabled={updating}
+            onClick={() => handleAdvanceStatus('delivery_en_route')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            {updating ? <span className="btn__spinner" /> : (
+              <>
+                <LaundryIcons.DeliveryScooter size={20} color="#FFFFFF" />
+                Start Delivery to Customer
+              </>
+            )}
           </button>
         </div>
       )}

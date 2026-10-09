@@ -435,6 +435,23 @@ export default function RiderHomePage() {
                 </button>
               )}
 
+              {activeOrder.status === 'picked_up' && (
+                <button
+                  type="button"
+                  className="btn btn--primary btn--lg btn--full"
+                  disabled={updating}
+                  onClick={() => handleAdvanceStatus('at_facility')}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#0E7490' }}
+                >
+                  {updating ? <span className="btn__spinner" /> : (
+                    <>
+                      <LaundryIcons.Washer size={20} color="#FFFFFF" />
+                      Arrived at Hub / Drop Off at Facility
+                    </>
+                  )}
+                </button>
+              )}
+
               {activeOrder.status === 'ready_for_delivery' && (
                 <button
                   type="button"

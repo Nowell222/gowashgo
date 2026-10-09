@@ -45,21 +45,9 @@ export default function LandingPage() {
         zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: 'var(--radius-md)',
-            background: 'linear-gradient(135deg, #0284C7, #06B6D4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)',
-          }}>
-            🧺
-          </div>
+          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={38} height={38} style={{ borderRadius: 8, objectFit: 'contain' }} />
           <span style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.03em' }}>
-            Wash<span style={{ color: '#0284C7' }}>Go</span>
+            Go<span style={{ color: '#0E7490' }}>Wash</span>Go
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>

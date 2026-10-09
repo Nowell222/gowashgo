@@ -28,9 +28,9 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
     <div className="mobile-shell">
       {/* Header (Flat Linen, Laundry Brand Tag) */}
       <header className="mobile-header">
-        <div className="mobile-header__logo" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <LaundryIcons.WaterDrop size={22} color="#0E7490" />
-          <span style={{ color: '#0E7490', fontWeight: 800, letterSpacing: '-0.02em' }}>GoWashGo</span>
+        <div className="mobile-header__logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/icons/gowashgo-icon.png" alt="GoWashGo" width={24} height={24} style={{ borderRadius: 6, objectFit: 'contain' }} />
+          <span style={{ color: '#0E7490', fontWeight: 800, letterSpacing: '-0.02em', fontSize: 17 }}>GoWashGo</span>
         </div>
         <div className="mobile-header__actions">
           <NotificationBell />
