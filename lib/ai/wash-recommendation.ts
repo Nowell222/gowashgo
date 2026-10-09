@@ -130,28 +130,36 @@ Return ONLY a valid JSON object matching this schema:
   "notes": "1-2 sentence technician care instruction"
 }`;
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' },
-      }),
-      signal: AbortSignal.timeout(4500),
-    });
+    const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
 
-    if (res.ok) {
-      const data = await res.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (rawText) {
-        const parsed = JSON.parse(rawText);
-        return {
-          wash_program: parsed.wash_program || 'normal',
-          water_temp: parsed.water_temp || 'warm',
-          special_handling: Array.isArray(parsed.special_handling) ? parsed.special_handling : [],
-          confidence: 'ai_evaluated',
-          notes: parsed.notes || 'AI evaluated wash cycle.',
-        };
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          }),
+          signal: AbortSignal.timeout(4500),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const parsed = JSON.parse(rawText);
+            return {
+              wash_program: parsed.wash_program || 'normal',
+              water_temp: parsed.water_temp || 'warm',
+              special_handling: Array.isArray(parsed.special_handling) ? parsed.special_handling : [],
+              confidence: 'ai_evaluated',
+              notes: parsed.notes || 'AI evaluated wash cycle.',
+            };
+          }
+        }
+      } catch {
+        // Continue to next candidate model
       }
     }
   } catch (err) {

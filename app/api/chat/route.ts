@@ -113,7 +113,7 @@ TONE & STYLE:
       return NextResponse.json({ reply: cannedResponse });
     }
 
-    // 4. Call Google Gemini 2.0 Flash API
+    // 4. Call Google Gemini API (gemini-3.5-flash-lite / gemini-3.5-flash / gemini-3.8-flash)
     const formattedContents = [
       {
         role: 'user',
@@ -139,35 +139,51 @@ TONE & STYLE:
       parts: [{ text: message }],
     });
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: formattedContents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 350,
-        },
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
+    let rawReply: string | null = null;
+    const CANDIDATE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'];
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn('Gemini chat API error:', errText);
-      return NextResponse.json({
-        reply: "I'm having a little trouble connecting to my laundry knowledge base right now. For order updates, please check your Orders tab, or ask me again in a moment!",
-      });
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: formattedContents,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 350,
+            },
+          }),
+          signal: AbortSignal.timeout(6000),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          rawReply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawReply) break;
+        } else {
+          const errText = await res.text();
+          console.warn(`Gemini model ${model} error:`, errText);
+        }
+      } catch (err: any) {
+        console.warn(`Gemini model ${model} fetch failed:`, err?.message || err);
+      }
     }
 
-    const data = await res.json();
-    const rawReply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help with your laundry questions!";
+    // Resilient fallback if AI is unavailable: provide real customer order info if present
+    if (!rawReply) {
+      if (customerContext.includes('Order #')) {
+        rawReply = `Here is your current order update:\n\n${customerContext.split('Active/Recent Customer Orders:\n')[1] || customerContext}\n\nYou can also monitor live rider status on your Orders tab anytime!`;
+      } else {
+        rawReply = "Kumusta! I am your GoWashGo Laundry Concierge. How can I help you with booking a pickup, tracking an order, or fabric stain care today?";
+      }
+    }
 
     return NextResponse.json({ reply: rawReply });
   } catch (err: any) {
     console.error('Chat endpoint error:', err);
     return NextResponse.json({
-      reply: "Hello! Our AI concierge is temporarily reconnecting. Please feel free to check your active orders on your Orders tab or reach out to our branch helpline.",
+      reply: "Kumusta! I'm your GoWashGo Laundry Concierge. You can view all your ongoing washes in the Orders tab or message our branch hotline anytime!",
     });
   }
 }
