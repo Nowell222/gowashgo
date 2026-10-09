@@ -1,8 +1,15 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatPeso } from '@/lib/utils/currency';
 import { formatOrderStatus } from '@/lib/orders/status-machine';
 import type { OrderStatus } from '@/lib/types';
+
+/**
+ * Format centavos to pure number string (2 decimal places) for PDF documents.
+ * Avoids Unicode currency symbols (e.g. ₱) which standard jsPDF fonts render as ±.
+ */
+function formatPdfNumber(centavos: number): string {
+  return (centavos / 100).toFixed(2);
+}
 
 /**
  * Format a date nicely for PDF headers & stamps
@@ -129,7 +136,7 @@ export async function downloadAdminPlatformReport(data: any) {
 
   doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPeso(s.totalRevenueCentavos || 0), 20, 67);
+  doc.text(formatPdfNumber(s.totalRevenueCentavos || 0), 20, 67);
   doc.text(String(s.totalOrders || 0), 80, 67);
   doc.text(`${s.totalWeightKg || 0} kg`, 135, 67);
   doc.text(`${s.totalBranches || 0} locations`, 195, 67);
@@ -153,10 +160,10 @@ export async function downloadAdminPlatformReport(data: any) {
       `${b.ordersCount || 0} orders`,
       `${b.activeOrdersCount || 0} active`,
       `${b.staffCount || 0} staff & riders`,
-      formatPeso(b.revenueCentavos || 0),
+      formatPdfNumber(b.revenueCentavos || 0),
       b.isActive ? 'Active' : 'Inactive',
     ]),
-    foot: [['TOTAL PLATFORM PROCESSED', '', `${totalBranchOrders} orders`, '', '', formatPeso(totalBranchRevenue), '']],
+    foot: [['TOTAL PLATFORM PROCESSED', '', `${totalBranchOrders} orders`, '', '', formatPdfNumber(totalBranchRevenue), '']],
     theme: 'grid',
     headStyles: {
       fillColor: COLOR_DARK,
@@ -197,10 +204,10 @@ export async function downloadAdminPlatformReport(data: any) {
       formatOrderStatus(o.status as OrderStatus),
       o.weightKg ? `${o.weightKg} kg` : '—',
       o.paymentMethod.toUpperCase(),
-      formatPeso(o.totalCentavos || 0),
+      formatPdfNumber(o.totalCentavos || 0),
       new Date(o.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
     ]),
-    foot: [['TOTAL PROCESSED', `${orders.length} orders`, '', '', '', '', '', formatPeso(totalLedgerCentavos), '']],
+    foot: [['TOTAL PROCESSED', `${orders.length} orders`, '', '', '', '', '', formatPdfNumber(totalLedgerCentavos), '']],
     theme: 'striped',
     headStyles: {
       fillColor: COLOR_PRIMARY,
@@ -280,12 +287,12 @@ export async function downloadManagerShiftReport(props: {
 
   doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPeso(totalRealizedRevenue), 20, 67);
+  doc.text(formatPdfNumber(totalRealizedRevenue), 20, 67);
   doc.text(String(completedOrders.length), 72, 67);
   doc.text(`${totalWeight.toFixed(1)} kg`, 115, 67);
 
   doc.setTextColor(180, 83, 9); // Amber for unremitted cash
-  doc.text(formatPeso(unremittedCash), 150, 67);
+  doc.text(formatPdfNumber(unremittedCash), 150, 67);
 
   // Section 1: Courier COD Cash Reconciliation Table
   doc.setFontSize(11);
@@ -302,10 +309,10 @@ export async function downloadManagerShiftReport(props: {
       r.riderName || 'Courier',
       r.phone || '—',
       String(r.completedCount || 0),
-      formatPeso(r.cashCollected || 0),
+      formatPdfNumber(r.cashCollected || 0),
       r.isSettled ? 'Settled & Verified ✓' : 'Pending Drawer Handover ⚠️',
     ]),
-    foot: [['TOTAL COURIER COLLECTIONS', '', '', formatPeso(totalCourierCash), '']],
+    foot: [['TOTAL COURIER COLLECTIONS', '', '', formatPdfNumber(totalCourierCash), '']],
     theme: 'grid',
     headStyles: {
       fillColor: COLOR_DARK,
@@ -343,9 +350,9 @@ export async function downloadManagerShiftReport(props: {
       formatOrderStatus(o.status as OrderStatus),
       o.weight_kg ? `${o.weight_kg} kg` : '—',
       (o.payment_method || 'online').toUpperCase(),
-      formatPeso(o.total || 0),
+      formatPdfNumber(o.total || 0),
     ]),
-    foot: [['TOTAL SHIFT PROCESSED', `${orders.length} orders`, '', '', `${totalWeight.toFixed(1)} kg`, '', formatPeso(totalAmountAllOrders)]],
+    foot: [['TOTAL SHIFT PROCESSED', `${orders.length} orders`, '', '', `${totalWeight.toFixed(1)} kg`, '', formatPdfNumber(totalAmountAllOrders)]],
     theme: 'striped',
     headStyles: {
       fillColor: COLOR_PRIMARY,
@@ -423,7 +430,7 @@ export async function downloadStaffFacilityReport(props: {
 
   doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPeso(totalAmountCentavos), 20, 67);
+  doc.text(formatPdfNumber(totalAmountCentavos), 20, 67);
   doc.text(`${totalWeightKg.toFixed(1)} kg`, 78, 67);
   doc.text(`${orders.length} orders`, 132, 67);
 
@@ -447,10 +454,10 @@ export async function downloadStaffFacilityReport(props: {
       o.customer?.full_name || 'Customer',
       formatOrderStatus(o.status as OrderStatus),
       o.weight_kg ? `${o.weight_kg} kg` : '—',
-      formatPeso(o.total || 0),
+      formatPdfNumber(o.total || 0),
       o.intake_discrepancy_note || o.special_instructions || 'Standard fabric care',
     ]),
-    foot: [['TOTAL FACILITY PROCESSED', `${orders.length} orders`, '', `${totalWeightKg.toFixed(1)} kg`, formatPeso(totalAmountCentavos), '']],
+    foot: [['TOTAL FACILITY PROCESSED', `${orders.length} orders`, '', `${totalWeightKg.toFixed(1)} kg`, formatPdfNumber(totalAmountCentavos), '']],
     theme: 'grid',
     headStyles: {
       fillColor: COLOR_DARK,
