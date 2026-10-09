@@ -13,11 +13,10 @@ function BookingForm() {
   const searchParams = useSearchParams();
   const reorderId = searchParams.get('reorder_id');
 
-  const [step, setStep] = useState<1 | 2>(1);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('00000000-0000-0000-0000-000000000001');
 
-  // Step 1: Addresses & Schedule
+  // Addresses & Schedule
   const [pickupAddress, setPickupAddress] = useState('Katipunan Ave, Quezon City, Metro Manila');
   const [pickupLat, setPickupLat] = useState(14.6537);
   const [pickupLng, setPickupLng] = useState(121.0685);
@@ -34,9 +33,6 @@ function BookingForm() {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [newLabelInput, setNewLabelInput] = useState('Home');
   const [showSaveModal, setShowSaveModal] = useState(false);
-
-  // Step 2: Payment
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('online');
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -89,7 +85,6 @@ function BookingForm() {
               setDeliveryLng(o.delivery_longitude);
               setSameAsPickup(o.pickup_address === o.delivery_address);
               if (o.branch_id) setSelectedBranchId(o.branch_id);
-              if (o.payment_method) setPaymentMethod(o.payment_method);
               if (o.special_instructions) setSpecialInstructions(o.special_instructions);
               setReorderNotice(`Pre-filled details from order ${o.order_number}`);
             }
@@ -195,7 +190,7 @@ function BookingForm() {
           delivery_longitude: sameAsPickup ? pickupLng : deliveryLng,
           pickup_scheduled_at: pickupScheduledAt ? new Date(pickupScheduledAt).toISOString() : null,
           special_instructions: specialInstructions || null,
-          payment_method: paymentMethod,
+          payment_method: 'online',
           items: [],
         }),
       });
@@ -242,14 +237,8 @@ function BookingForm() {
           Schedule Pickup
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: 12, margin: '4px 0 0' }}>
-          Step {step} of 2 — {step === 1 ? 'Location & Schedule' : 'Payment & Estimate'}
+          Doorstep Weighing & Live Pricing • No Upfront Payment Required
         </p>
-
-        {/* 2-Step Progress Indicator */}
-        <div style={{ display: 'flex', gap: 6, marginTop: 12, height: 4, borderRadius: 2, background: '#E7E2D8', overflow: 'hidden' }}>
-          <div style={{ flex: 1, background: 'var(--color-primary)' }} />
-          <div style={{ flex: 1, background: step >= 2 ? 'var(--color-primary)' : '#E7E2D8' }} />
-        </div>
       </div>
 
       {reorderNotice && (
@@ -264,9 +253,7 @@ function BookingForm() {
         </div>
       )}
 
-      {/* ================= STEP 1: Branch & Location ================= */}
-      {step === 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Branch selector */}
           <div className="flat-block" style={{ background: '#F3EFE6' }}>
             <label style={{ marginBottom: 8, display: 'block', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -526,51 +513,16 @@ function BookingForm() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!pickupAddress) {
-                setError('Please provide a pickup address');
-                return;
-              }
-              setError('');
-              setStep(2);
-            }}
-            style={{
-              width: '100%',
-              background: 'var(--color-primary)',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: 12,
-              padding: '14px',
-              fontSize: 14,
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <span>Continue to Payment & Review</span>
-            <LaundryIcons.ArrowRight size={16} color="#FFFFFF" />
-          </button>
-        </div>
-      )}
-
-      {/* ================= STEP 2: Review & Payment ================= */}
-      {step === 2 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Pickup-Side Scale Feature Banner */}
+          {/* Doorstep Weighing Feature Banner */}
           <div className="flat-block" style={{ background: '#ECFEFF', padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <LaundryIcons.Scale size={20} color="var(--color-primary)" />
               <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Pickup-Side Scale & Instant Pricing
+                Doorstep Weighing &amp; Live Pricing
               </h3>
             </div>
             <p style={{ fontSize: 12, color: 'var(--color-text-dark)', lineHeight: 1.5, margin: '0 0 12px' }}>
-              The rider brings a portable digital scale directly to your door at pickup. Your laundry bag is weighed on the spot, and the exact total price is computed instantly right before handover.
+              No upfront payment or guessing weights now. Your rider brings a portable digital scale directly to your door at pickup. Your exact price will lock in instantly on your screen, and you can choose to pay via GCash, Maya, Card, or Cash on Delivery right after weighing!
             </p>
             <div
               style={{
@@ -588,41 +540,6 @@ function BookingForm() {
               <span style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-primary)' }}>
                 {formatPeso(pricePerKgCentavos)} / kg
               </span>
-            </div>
-          </div>
-
-          {/* Estimated Cost Range */}
-          <div className="flat-block" style={{ background: '#F3EFE6' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-              <LaundryIcons.ReceiptTicket size={16} color="var(--color-accent)" />
-              <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                Estimated Price Range
-              </h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
-                <span>Typical Load ({minEstimatedKg}kg – {maxEstimatedKg}kg)</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-dark)', fontFamily: 'var(--font-mono)' }}>
-                  {formatPeso(minEstimatedSubtotal)} – {formatPeso(maxEstimatedSubtotal)}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}>
-                <span>Delivery & Return Fee</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-dark)', fontFamily: 'var(--font-mono)' }}>
-                  {formatPeso(deliveryFeeCentavos)}
-                </span>
-              </div>
-              <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 800, fontSize: 13 }}>Estimated Total Range</span>
-                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-primary)' }}>
-                  {formatPeso(minEstimatedTotal)} – {formatPeso(maxEstimatedTotal)}
-                </span>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                Exact price will lock in when rider enters weight on the portable scale at pickup.
-              </div>
             </div>
           </div>
 
@@ -644,113 +561,31 @@ function BookingForm() {
             </div>
           )}
 
-          {/* Payment Method Selector */}
-          <div className="flat-block" style={{ background: '#F3EFE6' }}>
-            <h3 style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-              Choose Payment Method
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  background: paymentMethod === 'online' ? '#ECFEFF' : '#FFFFFF',
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  value="online"
-                  checked={paymentMethod === 'online'}
-                  onChange={() => setPaymentMethod('online')}
-                  style={{ accentColor: 'var(--color-primary)' }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--color-text-dark)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <LaundryIcons.ReceiptTicket size={16} color="var(--color-primary)" />
-                    <span>Online Payment (GCash / Maya / Card)</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    Pay remotely right after rider scale weighing or anytime before delivery
-                  </div>
-                </div>
-              </label>
-
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  background: paymentMethod === 'cash' ? '#ECFEFF' : '#FFFFFF',
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  value="cash"
-                  checked={paymentMethod === 'cash'}
-                  onChange={() => setPaymentMethod('cash')}
-                  style={{ accentColor: 'var(--color-primary)' }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--color-text-dark)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <LaundryIcons.DeliveryScooter size={16} color="var(--color-accent)" />
-                    <span>Cash on Delivery (COD)</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    Hand cash directly to the rider upon final doorstep handover
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              style={{
-                flex: 1,
-                background: '#F3EFE6',
-                color: 'var(--color-text-dark)',
-                border: 'none',
-                borderRadius: 12,
-                padding: '14px',
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: 'pointer',
-              }}
-            >
-              ← Back
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmitOrder}
-              disabled={submitting}
-              style={{
-                flex: 2,
-                background: 'var(--color-primary)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 12,
-                padding: '14px',
-                fontSize: 14,
-                fontWeight: 800,
-                cursor: 'pointer',
-              }}
-            >
-              {submitting ? 'Placing Order...' : 'Confirm Laundry Pickup'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSubmitOrder}
+            disabled={submitting}
+            style={{
+              width: '100%',
+              background: 'var(--color-primary)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 12,
+              padding: '16px',
+              fontSize: 15,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: '0 4px 14px rgba(14, 116, 144, 0.3)',
+            }}
+          >
+            <LaundryIcons.Basket size={18} color="#FFFFFF" />
+            <span>{submitting ? 'Placing Order...' : 'Confirm & Request Pickup'}</span>
+          </button>
         </div>
-      )}
 
       {/* Save Address Modal */}
       {showSaveModal && (

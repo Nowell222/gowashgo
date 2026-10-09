@@ -339,21 +339,42 @@ export default function CustomerOrderDetailPage({ params }: { params: Promise<{ 
               <LaundryIcons.ReceiptTicket size={14} color="#FEF08A" />
               <span>Total Price</span>
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 26, fontWeight: 800, marginTop: 4, color: '#FEF08A', letterSpacing: '-0.02em' }}>
-              {formatPeso(order.total)}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: order.weight_kg ? 26 : 18, fontWeight: 800, marginTop: 4, color: '#FEF08A', letterSpacing: '-0.02em' }}>
+              {order.weight_kg ? formatPeso(order.total) : 'Pending Weighing'}
             </div>
             <div style={{ fontSize: 10, opacity: 0.85, marginTop: 2 }}>
               {order.weight_kg
                 ? `${order.weight_kg}kg × ₱${(order.branch as any)?.price_per_kg ? ((order.branch as any).price_per_kg / 100).toFixed(0) : '35'}/kg + ${formatPeso(order.delivery_fee)} del.`
-                : 'Auto-computed at scale'}
+                : 'Locks in upon scale weighing'}
             </div>
           </div>
         </div>
 
-        {/* Payment Action / Remote Settlement (GCash/Maya/Card) */}
+        {/* Payment Action / Remote Settlement (Unlocks ONLY after weighing) */}
         {!isCancelled && !['delivered', 'completed'].includes(order.status) && (
           <div>
-            {order.payment_method === 'online' ? (
+            {!order.weight_kg ? (
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <LaundryIcons.Scale size={20} color="#FEF08A" />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 12, color: '#FEF08A' }}>
+                    Awaiting Doorstep Weighing
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.9, marginTop: 2 }}>
+                    Exact total and payment options (GCash, Maya, or COD) will appear here right after your rider weighs your laundry on the portable scale.
+                  </div>
+                </div>
+              </div>
+            ) : order.payment_method === 'online' ? (
               isPaid ? (
                 <div
                   style={{
