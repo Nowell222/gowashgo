@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { LaundryIcons } from '@/components/common/LaundryIcons';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import LaundryChathead from '@/components/chat/LaundryChathead';
 import '@/styles/mobile-layout.css';
 
 /**
@@ -50,6 +51,9 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
       <main className="mobile-content">
         {children}
       </main>
+
+      {/* Floating AI Laundry Concierge Chathead */}
+      {isCustomer && <LaundryChathead />}
 
       {/* Bottom Navigation (Custom Care-Tag SVG Icons, Zero Emojis) */}
       {isCustomer && (
