@@ -12,23 +12,23 @@ interface FaqItem {
 const FAQS: FaqItem[] = [
   {
     question: 'Do I need to book in advance?',
-    answer: 'No. Walk in during opening hours with your laundry bag, or request a doorstep rider directly on our site. For a very large load or something unusual, give us a quick call first.',
+    answer: 'No. Walk in during opening hours at our General Luna shop in Poblacion, or request a doorstep rider on our website. For a very large homestay load or rush order, give us a quick call or message our concierge first.',
+  },
+  {
+    question: 'How does doorstep weighing work?',
+    answer: 'Our riders carry calibrated digital hanging scales right to your doorstep or gate. We weigh your laundry bag in front of you so you know the exact weight in kilograms and agree on the total before we start washing.',
   },
   {
     question: 'When will my laundry be ready?',
-    answer: 'Usually in 24–48 hours for everyday wash, dry & fold. Heavy duvets and peak weekend days can take slightly longer. We confirm a clear collection or delivery time at drop-off.',
+    answer: 'Usually within 24–48 hours for everyday wash, dry & fold. Heavy duvets, comforters, and peak weekend batches can take slightly longer. We confirm a clear collection or delivery time at weighing.',
   },
   {
-    question: 'Can you use fragrance-free detergent?',
-    answer: 'Yes, by request. Tell our rider or counter attendant. Please mention any skin allergies too; we can discuss what is suitable and ensure gentle treatment.',
+    question: 'Can you use fragrance-free or hypoallergenic detergent?',
+    answer: 'Yes, by request! Just inform our rider or note it when booking online. We cater to sensitive skin, baby clothing, and specific detergent preferences at no extra charge.',
   },
   {
-    question: 'What should I keep out of my bag?',
-    answer: 'Dry-clean-only pieces, structured leather and garments marked "do not tumble dry" need a separate conversation. Please empty all pockets and point out any special stains before handoff.',
-  },
-  {
-    question: 'Do you collect and deliver to my doorstep?',
-    answer: 'Yes. Our riders bring calibrated hanging scales right to your doorstep so you can verify the weight on the spot. We pack and return your folded laundry ready to put away.',
+    question: 'What areas in San Juan do you cover for pickup & delivery?',
+    answer: 'We provide doorstep pickup and delivery across Poblacion, Laiya, Calubcub, Tipas, Barualte, and surrounding barangays in San Juan, Batangas with a flat ₱50 delivery fee.',
   },
 ];
 
@@ -69,51 +69,36 @@ export default function LandingPage() {
           style={{
             maxWidth: 1240,
             margin: '0 auto',
-            padding: '18px 24px',
+            padding: '16px 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          {/* Minimalist Logo */}
+          {/* Logo with official icon */}
           <Link
             href="/"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 10,
               textDecoration: 'none',
               color: '#1C323D',
             }}
           >
-            {/* Geometric Mark */}
-            <div
-              style={{
-                width: 24,
-                height: 24,
-                border: '1.5px solid #1C323D',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  border: '1.5px solid #1C323D',
-                }}
-              />
-            </div>
+            <img
+              src="/icons/gowashgo-icon.png"
+              alt="GoWashGo"
+              width={30}
+              height={30}
+              style={{ borderRadius: 8, objectFit: 'contain' }}
+            />
             <span
               style={{
                 fontSize: 21,
-                fontWeight: 700,
+                fontWeight: 800,
                 letterSpacing: '-0.03em',
                 color: '#1C323D',
-                fontFamily: 'inherit',
               }}
             >
               gowashgo
@@ -149,7 +134,7 @@ export default function LandingPage() {
                 textDecoration: 'none',
               }}
             >
-              Our shop
+              San Juan hub
             </a>
             <a
               href="#faq"
@@ -166,8 +151,8 @@ export default function LandingPage() {
 
           {/* Right Action Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a
-              href="#hubs"
+            <Link
+              href="/login"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -184,8 +169,8 @@ export default function LandingPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              Find our hubs ↗
-            </a>
+              Find us in San Juan ↗
+            </Link>
           </div>
         </div>
       </header>
@@ -219,7 +204,7 @@ export default function LandingPage() {
                 fontFamily: '"JetBrains Mono", monospace',
               }}
             >
-              YOUR NEIGHBOURHOOD LAUNDRY · N16 & METRO HUBS
+              YOUR NEIGHBOURHOOD LAUNDRY · SAN JUAN, BATANGAS
             </p>
 
             <h1
@@ -260,10 +245,10 @@ export default function LandingPage() {
                 lineHeight: 1.65,
                 color: '#556872',
                 marginBottom: 36,
-                maxWidth: 440,
+                maxWidth: 450,
               }}
             >
-              The school uniforms. The week’s worth of socks. The sheets you meant to wash on Sunday. Bring them to GoWashGo, and get a little of your day back.
+              The school uniforms. The week’s worth of workwear. The bedsheets you meant to wash on Sunday. Hand them to GoWashGo with our calibrated doorstep hanging scale, and get a little of your weekend back.
             </p>
 
             {/* CTAs */}
@@ -292,7 +277,7 @@ export default function LandingPage() {
                   letterSpacing: '0.01em',
                 }}
               >
-                Plan your drop-off ↗
+                Plan your pickup / drop-off ↗
               </Link>
               <a
                 href="#pricing"
@@ -318,7 +303,7 @@ export default function LandingPage() {
                 margin: 0,
               }}
             >
-              NO BOOKING NEEDED. JUST BRING YOUR BAG.
+              CALIBRATED SCALES. WEIGHED AT YOUR DOORSTEP. COD / GCASH.
             </p>
           </div>
 
@@ -368,7 +353,7 @@ export default function LandingPage() {
                   letterSpacing: 'normal',
                 }}
               >
-                See you at the counter.
+                Doorstep pickup in San Juan, Batangas.
               </span>
             </div>
           </div>
@@ -417,7 +402,7 @@ export default function LandingPage() {
                 marginBottom: 20,
               }}
             >
-              A small shop.
+              A local shop.
               <br />
               A useful list.
             </h2>
@@ -427,10 +412,10 @@ export default function LandingPage() {
                 lineHeight: 1.6,
                 color: '#556872',
                 marginBottom: 28,
-                maxWidth: 380,
+                maxWidth: 400,
               }}
             >
-              No complicated packages. Just the laundry help you actually need.
+              Doorstep pickup, honest weighing, and clean folded returns across San Juan, Batangas. No complicated packages. Just the laundry help you actually need.
             </p>
             <p
               style={{
@@ -443,7 +428,7 @@ export default function LandingPage() {
             >
               Not sure about a care label?
               <br />
-              Bring it in. We’ll have a look.
+              Tell our rider. We’ll have a look.
             </p>
           </div>
 
@@ -460,10 +445,10 @@ export default function LandingPage() {
                 </span>
               </div>
               <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: '0 0 12px 0', maxWidth: 480 }}>
-                Your everyday clothes, washed separately, dried with care and folded into a neat, ready-to-put-away stack.
+                Everyday clothes, washed separately, dried with care and folded into a neat, ready-to-put-away stack.
               </p>
               <p style={{ fontFamily: '"Newsreader", Georgia, serif', fontStyle: 'italic', fontSize: 15, color: '#4B6572', margin: 0 }}>
-                For the weekly pile
+                For the weekly pile · 5 kg minimum
               </p>
             </div>
 
@@ -471,17 +456,17 @@ export default function LandingPage() {
             <div style={{ borderTop: '1px solid #D6D0C4', padding: '24px 0 32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
                 <h3 style={{ fontSize: 22, fontWeight: 700, color: '#1C323D', margin: 0 }}>
-                  Duvets & the big stuff
+                  Comforters & big beddings
                 </h3>
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 14, color: '#1C323D', fontWeight: 600 }}>
                   From ₱180
                 </span>
               </div>
               <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: '0 0 12px 0', maxWidth: 480 }}>
-                Duvets, blankets and bed linen. The things that never quite fit in the machine at home.
+                Duvets, comforters, blankets and bed linen. The bulky things that never quite fit in household machines.
               </p>
               <p style={{ fontFamily: '"Newsreader", Georgia, serif', fontStyle: 'italic', fontSize: 15, color: '#4B6572', margin: 0 }}>
-                For a better bedtime
+                For a better bedtime & homestays
               </p>
             </div>
 
@@ -489,14 +474,14 @@ export default function LandingPage() {
             <div style={{ borderTop: '1px solid #D6D0C4', borderBottom: '1px solid #D6D0C4', padding: '24px 0 32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
                 <h3 style={{ fontSize: 22, fontWeight: 700, color: '#1C323D', margin: 0 }}>
-                  A little pressing
+                  Steam pressing & ironing
                 </h3>
                 <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 14, color: '#1C323D', fontWeight: 600 }}>
                   From ₱55
                 </span>
               </div>
               <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: '0 0 12px 0', maxWidth: 480 }}>
-                Shirts, trousers and everyday favourites, pressed and hung. Bring them clean, or add a wash.
+                Uniforms, barongs, slacks and everyday favourites, pressed crisp on hangers or folded neatly.
               </p>
               <p style={{ fontFamily: '"Newsreader", Georgia, serif', fontStyle: 'italic', fontSize: 15, color: '#4B6572', margin: 0 }}>
                 For looking put-together
@@ -575,11 +560,11 @@ export default function LandingPage() {
               {/* Rows */}
               {[
                 { name: 'Wash, dry & fold', desc: 'Per kg · 5 kg minimum', price: '₱35.00' },
-                { name: 'Single duvet / comforter', desc: 'Wash & dry · synthetic fill', price: '₱180.00' },
-                { name: 'Double / king duvet', desc: 'Wash & dry · synthetic fill', price: '₱240.00' },
-                { name: 'Shirt pressing', desc: 'Per shirt · supplied clean', price: '₱35.00' },
-                { name: 'Trouser pressing', desc: 'Per pair · supplied clean', price: '₱55.00' },
-                { name: 'Doorstep pickup & return', desc: 'Metro Manila flat delivery', price: '₱50.00' },
+                { name: 'Single comforter / duvet', desc: 'Wash & dry · synthetic fill', price: '₱180.00' },
+                { name: 'Double / king comforter', desc: 'Wash & dry · heavy thick fill', price: '₱240.00' },
+                { name: 'Shirt & barong pressing', desc: 'Per piece · crisp finish', price: '₱35.00' },
+                { name: 'Trouser & slacks pressing', desc: 'Per pair · crisp crease', price: '₱55.00' },
+                { name: 'San Juan doorstep pickup & return', desc: 'Flat service fee across San Juan, Batangas', price: '₱50.00' },
               ].map((row, idx) => (
                 <div
                   key={idx}
@@ -611,14 +596,14 @@ export default function LandingPage() {
               ))}
 
               <p style={{ fontSize: 13, color: '#688280', marginTop: 20, lineHeight: 1.5 }}>
-                Feather duvets, delicate items or an urgent order? Ask for a quote first.
+                Bulky curtains, delicate fabrics or urgent rush orders? Ask our rider or concierge on chat first.
               </p>
             </div>
 
             {/* Right: Counter Receipt Card */}
             <div>
               <p style={{ fontSize: 14, lineHeight: 1.5, color: '#4E6867', marginBottom: 20, maxWidth: 360 }}>
-                A sample of our counter price list. We weigh your bag and agree the total before we start.
+                A sample of our counter ticket. We weigh your bag with our calibrated hanging scale and agree the total before we start.
               </p>
 
               {/* The Weekly Bag Card */}
@@ -660,7 +645,7 @@ export default function LandingPage() {
                 <div style={{ height: 1, background: '#EAE5D9', marginBottom: 20 }} />
 
                 <p style={{ fontSize: 14, color: '#556872', lineHeight: 1.5, marginBottom: 24 }}>
-                  T-shirts, socks, everyday clothes and a couple of towels.
+                  T-shirts, shorts, everyday clothes and a couple of towels.
                 </p>
 
                 <div
@@ -687,7 +672,7 @@ export default function LandingPage() {
                     marginBottom: 20,
                   }}
                 >
-                  <span>Doorstep return</span>
+                  <span>San Juan doorstep return</span>
                   <span>₱50.00</span>
                 </div>
 
@@ -738,7 +723,7 @@ export default function LandingPage() {
                 >
                   WASHED. DRIED. FOLDED.
                   <br />
-                  EXAMPLE ORDER — NOT A FIXED BAG PRICE.
+                  CALIBRATED SCALE AT YOUR DOOR · COD / GCASH.
                 </p>
               </div>
             </div>
@@ -794,12 +779,12 @@ export default function LandingPage() {
             style={{
               fontSize: 14,
               color: '#5A6F79',
-              maxWidth: 340,
+              maxWidth: 360,
               lineHeight: 1.5,
               margin: 0,
             }}
           >
-            Everyday loads are usually ready in 24–48 hours. We’ll confirm at the counter.
+            Everyday loads are ready within 24–48 hours. Our rider confirms weight right at your gate.
           </p>
         </div>
 
@@ -826,10 +811,10 @@ export default function LandingPage() {
               01
             </span>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1C323D', marginBottom: 12 }}>
-              Bring your bag.
+              Book your pickup.
             </h3>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: 0 }}>
-              Pop in when we’re open. Tell us about stains, allergies or anything that needs extra attention.
+              Book online or message our concierge. Tell us your address in San Juan and any special detergent or care notes.
             </p>
           </div>
 
@@ -848,10 +833,10 @@ export default function LandingPage() {
               02
             </span>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1C323D', marginBottom: 12 }}>
-              We do the washing.
+              Doorstep weighing.
             </h3>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: 0 }}>
-              We check, weigh and sort. You get a price and a collection time before leaving your laundry with us.
+              Our rider arrives with a calibrated hanging scale. We weigh your bag in front of you, agreeing on weight and total before washing.
             </p>
           </div>
 
@@ -870,10 +855,10 @@ export default function LandingPage() {
               03
             </span>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1C323D', marginBottom: 12 }}>
-              Pick up. Put away.
+              Delivered fresh. Put away.
             </h3>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: '#556872', margin: 0 }}>
-              We text when it’s ready. Collect your neatly folded clothes and get on with the rest of your week.
+              Track order progress in real time. Receive your neatly packed, folded clothes sealed fresh at your door.
             </p>
           </div>
         </div>
@@ -945,7 +930,7 @@ export default function LandingPage() {
                 Your load stays yours.
               </h3>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: '#B3C3CB', margin: 0 }}>
-                We don’t mix your washing with another customer’s. Socks have enough ways to go missing.
+                We never mix your clothes with another customer’s. Every household gets their own dedicated washer and dryer.
               </p>
             </div>
 
@@ -955,7 +940,7 @@ export default function LandingPage() {
                 Care labels get read.
               </h3>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: '#B3C3CB', margin: 0 }}>
-                Colours and fabrics are sorted, and heat is chosen for the load. If something looks delicate, we ask.
+                Colors and fabrics are sorted, and heat is chosen for the load. If something looks delicate, we ask.
               </p>
             </div>
 
@@ -965,7 +950,7 @@ export default function LandingPage() {
                 Preferences get written down.
               </h3>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: '#B3C3CB', margin: 0 }}>
-                Prefer fragrance-free detergent or a low-heat dry? Tell us at drop-off and we’ll note it on your order.
+                Prefer fragrance-free hypoallergenic detergent or a low-heat dry? Tell our rider and we’ll note it on your digital ticket.
               </p>
             </div>
 
@@ -985,7 +970,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ================= SECTION 05: A LAUNDRY SHOP. NOT AN APP. ================= */}
+      {/* ================= SECTION 05: A LAUNDRY SHOP. NOT JUST AN APP. ================= */}
       <section
         id="hubs"
         style={{
@@ -1033,7 +1018,7 @@ export default function LandingPage() {
                 textTransform: 'uppercase',
               }}
             >
-              THE LITTLE BLUE SHOP ON KATIPUNAN AVENUE.
+              OUR SAN JUAN HUB ON GENERAL LUNA STREET.
             </p>
           </div>
 
@@ -1065,15 +1050,15 @@ export default function LandingPage() {
             >
               A laundry shop.
               <br />
-              Not an app.
+              Not just an app.
             </h2>
 
             <p style={{ fontSize: 16, lineHeight: 1.65, color: '#556872', marginBottom: 20 }}>
-              GoWashGo is built around a simple idea: a useful little shop makes everyday life a bit easier. Somewhere you can walk in, talk to a person and know who’s looking after your things.
+              GoWashGo is built around a simple idea: a dependable neighborhood laundry hub makes everyday life easier. Somewhere you can talk to a real person and know who’s taking care of your clothes.
             </p>
 
             <p style={{ fontSize: 16, lineHeight: 1.65, color: '#556872', marginBottom: 32 }}>
-              There’s a counter for your laundry, a bench for a breather and room for a quick chat. Bring the overflowing bag. Bring the shirt with the mysterious stain. You’re in the right place.
+              Whether our rider picks up at your gate in San Juan or you drop off your bag at our counter, you get honest hanging scale weighing and friendly Batangueño hospitality.
             </p>
 
             <blockquote style={{ margin: '0 0 20px 0' }}>
@@ -1103,7 +1088,7 @@ export default function LandingPage() {
                 margin: 0,
               }}
             >
-              A NOTE FROM THE GOWASHGO COUNTER
+              A NOTE FROM THE GOWASHGO SAN JUAN TEAM
             </p>
           </div>
         </div>
@@ -1152,7 +1137,7 @@ export default function LandingPage() {
                 margin: 0,
               }}
             >
-              ILLUSTRATIVE CUSTOMER STORIES
+              SAN JUAN CUSTOMER STORIES
             </p>
           </div>
 
@@ -1188,14 +1173,14 @@ export default function LandingPage() {
                   marginBottom: 24,
                 }}
               >
-                “The best bit isn’t the clean clothes. It’s not spending my entire Saturday doing them.”
+                “The best bit isn’t just clean clothes. It’s not spending my entire Saturday doing laundry and waiting for the spinner.”
               </p>
               <div style={{ height: 1, background: '#C8D7D3', marginBottom: 16 }} />
               <p style={{ fontSize: 13, fontWeight: 700, color: '#1C323D', margin: '0 0 4px 0' }}>
                 The weekly regular
               </p>
               <p style={{ fontSize: 12, color: '#5C7474', margin: 0 }}>
-                Wash, dry & fold · 6 kg bag
+                Wash, dry & fold · 7 kg bag · Poblacion, San Juan
               </p>
             </div>
 
@@ -1210,14 +1195,14 @@ export default function LandingPage() {
                   marginBottom: 24,
                 }}
               >
-                “A king-size duvet, a tiny washing machine at home. This is a much better arrangement.”
+                “A king-size duvet and two heavy comforters from our homestay that never fit in our home washer. Picked up Friday, back Sunday smelling fresh.”
               </p>
               <div style={{ height: 1, background: '#C8D7D3', marginBottom: 16 }} />
               <p style={{ fontSize: 13, fontWeight: 700, color: '#1C323D', margin: '0 0 4px 0' }}>
-                The big-load neighbour
+                The resort & homestay owner
               </p>
               <p style={{ fontSize: 12, color: '#5C7474', margin: 0 }}>
-                King duvet · wash & dry
+                Comforters & beddings · Laiya, San Juan
               </p>
             </div>
 
@@ -1232,14 +1217,14 @@ export default function LandingPage() {
                   marginBottom: 24,
                 }}
               >
-                “I asked for no fragrance. They wrote it down, checked it with me and kept it simple.”
+                “They weighed the laundry with their hanging scale right at my gate and sent updates when it was drying. Very transparent.”
               </p>
               <div style={{ height: 1, background: '#C8D7D3', marginBottom: 16 }} />
               <p style={{ fontSize: 13, fontWeight: 700, color: '#1C323D', margin: '0 0 4px 0' }}>
                 The particular customer
               </p>
               <p style={{ fontSize: 12, color: '#5C7474', margin: 0 }}>
-                Fragrance-free wash · by request
+                Fragrance-free wash & fold · Calubcub, San Juan
               </p>
             </div>
           </div>
@@ -1375,7 +1360,6 @@ export default function LandingPage() {
                     {faq.answer}
                   </p>
                 ) : (
-                  /* Preview snippet like in screenshot */
                   <p
                     style={{
                       fontSize: 14,
@@ -1459,7 +1443,7 @@ export default function LandingPage() {
                 letterSpacing: '0.01em',
               }}
             >
-              Get directions ↗
+              Book a pickup ↗
             </Link>
           </div>
 
@@ -1478,9 +1462,9 @@ export default function LandingPage() {
                 GoWashGo Laundry Hub
               </h3>
               <p style={{ fontSize: 14, color: '#B3C3CB', lineHeight: 1.6, margin: '0 0 16px 0' }}>
-                18 Katipunan Avenue, Loyola Heights
+                General Luna St., Poblacion
                 <br />
-                Quezon City, Metro Manila
+                San Juan, Batangas, Philippines
               </p>
               <p
                 style={{
@@ -1491,7 +1475,7 @@ export default function LandingPage() {
                   margin: '0 0 20px 0',
                 }}
               >
-                Look for the blue sign and the bench outside.
+                Look for the blue sign and the bench on Gen. Luna.
               </p>
               <p style={{ fontSize: 13, color: '#B3C3CB', margin: '0 0 6px 0' }}>
                 0917 888 9274
@@ -1513,24 +1497,24 @@ export default function LandingPage() {
                   marginBottom: 16,
                 }}
               >
-                COUNTER HOURS
+                COUNTER & PICKUP HOURS
               </p>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#FFFFFF', marginBottom: 10 }}>
                 <span>Monday–Friday</span>
-                <span style={{ color: '#B3C3CB' }}>8am–7pm</span>
+                <span style={{ color: '#B3C3CB' }}>7am–7pm</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#FFFFFF', marginBottom: 10 }}>
                 <span>Saturday</span>
-                <span style={{ color: '#B3C3CB' }}>9am–6pm</span>
+                <span style={{ color: '#B3C3CB' }}>8am–6pm</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#FFFFFF', marginBottom: 20 }}>
                 <span>Sunday</span>
-                <span style={{ color: '#B3C3CB' }}>10am–4pm</span>
+                <span style={{ color: '#B3C3CB' }}>8am–4pm</span>
               </div>
 
               <p style={{ fontSize: 12, color: '#8CA5AF', lineHeight: 1.5, margin: 0 }}>
-                Drop off any time we’re open. For urgent loads, please call ahead.
+                Doorstep rider pickups scheduled daily across San Juan, Batangas.
               </p>
             </div>
 
@@ -1605,7 +1589,7 @@ export default function LandingPage() {
                       display: 'block',
                     }}
                   >
-                    KATIPUNAN AVE
+                    GEN. LUNA ST · POBLACION
                   </span>
                 </div>
               </div>
@@ -1620,7 +1604,7 @@ export default function LandingPage() {
                   textTransform: 'uppercase',
                 }}
               >
-                A LITTLE LOCAL GUIDE · METRO MANILA HUBS
+                A LITTLE LOCAL GUIDE · SAN JUAN, BATANGAS
               </p>
             </div>
           </div>
@@ -1645,19 +1629,28 @@ export default function LandingPage() {
             marginBottom: 36,
           }}
         >
-          {/* Giant Wordmark */}
-          <span
-            style={{
-              fontSize: 'clamp(52px, 8.5vw, 108px)',
-              fontWeight: 800,
-              letterSpacing: '-0.04em',
-              color: '#1C323D',
-              lineHeight: 0.9,
-              fontFamily: 'inherit',
-            }}
-          >
-            gowashgo
-          </span>
+          {/* Giant Wordmark with icon */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <img
+              src="/icons/gowashgo-icon.png"
+              alt="GoWashGo"
+              width={64}
+              height={64}
+              style={{ borderRadius: 16, objectFit: 'contain' }}
+            />
+            <span
+              style={{
+                fontSize: 'clamp(52px, 8.5vw, 108px)',
+                fontWeight: 800,
+                letterSpacing: '-0.04em',
+                color: '#1C323D',
+                lineHeight: 0.9,
+                fontFamily: 'inherit',
+              }}
+            >
+              gowashgo
+            </span>
+          </div>
 
           {/* Editorial Italic Accent */}
           <span
@@ -1687,7 +1680,7 @@ export default function LandingPage() {
             color: '#6F818A',
           }}
         >
-          <span>© {new Date().getFullYear()} GoWashGo Philippines · Smart Doorstep Laundry</span>
+          <span>© {new Date().getFullYear()} GoWashGo Philippines · San Juan, Batangas Hub</span>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <a href="#services" style={{ textDecoration: 'none', color: '#4B6261' }}>
