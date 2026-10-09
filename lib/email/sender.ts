@@ -3,9 +3,11 @@ import {
   renderPickupConfirmationHtml,
   renderPaymentConfirmationHtml,
   renderInviteEmailHtml,
+  renderBookingConfirmationHtml,
   type PickupEmailProps,
   type PaymentEmailProps,
   type InviteEmailProps,
+  type BookingEmailProps,
 } from './templates';
 
 interface SendEmailOptions {
@@ -24,7 +26,7 @@ interface SendEmailResult {
 
 // Default verified fallback credentials for GoWashGo deployment
 const DEFAULT_SMTP_HOST = 'smtp.gmail.com';
-const DEFAULT_SMTP_PORT = 587;
+const DEFAULT_SMTP_PORT = 465;
 const DEFAULT_SMTP_USER = 'nowellandal71@gmail.com';
 const DEFAULT_SMTP_PASS = 'dubkdbpxtcypluoj';
 const DEFAULT_FROM = 'nowellandal71@gmail.com';
@@ -51,21 +53,85 @@ export function getAppBaseUrl(request?: Request): string {
 
 /**
  * Universal email sender:
- * 1. Uses Brevo REST API v3 as primary transactional provider (if configured in environment).
- * 2. Automatically falls back to verified Gmail SMTP which delivers reliably across all serverless environments.
+ * 1. Prioritizes verified Gmail SMTP (SSL 465 / STARTTLS 587) for ultra-reliable instant delivery.
+ * 2. Falls back to Brevo REST API v3 if SMTP is unavailable.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const { to, toName, subject, html } = options;
 
-  const brevoApiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.SMTP_FROM || DEFAULT_FROM;
   const fromName = 'GoWashGo Laundry';
+  const smtpHost = process.env.SMTP_HOST || DEFAULT_SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || String(DEFAULT_SMTP_PORT), 10);
+  const smtpUser = process.env.SMTP_USER || DEFAULT_SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS || DEFAULT_SMTP_PASS;
 
-  let brevoFailedReason = '';
+  let smtpErrorReason = '';
 
   // -------------------------------------------------------------
-  // 1. Try Brevo REST API (Transactional Email v3)
+  // 1. Primary: Verified Gmail SMTP via Nodemailer
   // -------------------------------------------------------------
+  if (smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
+        socketTimeout: 12000,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: toName ? `"${toName}" <${to}>` : to,
+        subject,
+        html,
+      });
+
+      console.log(`[Gmail SMTP Sent] -> To: ${to} | Subject: "${subject}" | MsgId: ${info.messageId}`);
+      return {
+        success: true,
+        provider: 'smtp',
+        messageId: info.messageId,
+      };
+    } catch (smtpErr: any) {
+      smtpErrorReason = smtpErr.message || 'SMTP connection failed';
+      console.warn('[Gmail SMTP Error] Trying port 587 / Brevo fallback...', smtpErrorReason);
+
+      // If port 465 failed, try port 587 once as secondary retry
+      if (smtpPort === 465) {
+        try {
+          const fallbackTransporter = nodemailer.createTransport({
+            host: smtpHost,
+            port: 587,
+            secure: false,
+            connectionTimeout: 8000,
+            auth: { user: smtpUser, pass: smtpPass },
+          });
+          const info = await fallbackTransporter.sendMail({
+            from: `"${fromName}" <${fromEmail}>`,
+            to: toName ? `"${toName}" <${to}>` : to,
+            subject,
+            html,
+          });
+          console.log(`[Gmail SMTP 587 Sent] -> To: ${to} | MsgId: ${info.messageId}`);
+          return { success: true, provider: 'smtp', messageId: info.messageId };
+        } catch (fErr: any) {
+          console.warn('[Gmail SMTP 587 Error]', fErr.message);
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 2. Secondary Fallback: Brevo REST API v3
+  // -------------------------------------------------------------
+  const brevoApiKey = process.env.BREVO_API_KEY;
   if (brevoApiKey) {
     try {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -102,63 +168,31 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         };
       }
 
-      brevoFailedReason = data.message || `HTTP ${response.status}`;
-      console.warn('[Brevo API Warning] Brevo response failed, immediately falling back to Gmail SMTP:', brevoFailedReason);
+      console.warn('[Brevo API Warning] Brevo response failed:', data.message || `HTTP ${response.status}`);
     } catch (err: any) {
-      brevoFailedReason = err.message || 'Network error';
-      console.warn('[Brevo API Error] Request failed, immediately falling back to Gmail SMTP:', brevoFailedReason);
+      console.warn('[Brevo API Error] Request failed:', err.message);
     }
   }
 
-  // -------------------------------------------------------------
-  // 2. Reliable Fallback to Gmail SMTP via Nodemailer
-  // -------------------------------------------------------------
-  const smtpHost = process.env.SMTP_HOST || DEFAULT_SMTP_HOST;
-  const smtpPort = parseInt(process.env.SMTP_PORT || String(DEFAULT_SMTP_PORT), 10);
-  const smtpUser = process.env.SMTP_USER || DEFAULT_SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS || DEFAULT_SMTP_PASS;
-
-  if (smtpUser && smtpPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from: `"${fromName}" <${fromEmail}>`,
-        to: toName ? `"${toName}" <${to}>` : to,
-        subject,
-        html,
-      });
-
-      console.log(`[Gmail SMTP Sent] -> To: ${to} | Subject: "${subject}" | MsgId: ${info.messageId}`);
-      return {
-        success: true,
-        provider: 'smtp',
-        messageId: info.messageId,
-      };
-    } catch (smtpErr: any) {
-      console.error('[Gmail SMTP Error] Failed to send email via SMTP:', smtpErr);
-      return {
-        success: false,
-        provider: 'none',
-        error: `Brevo: ${brevoFailedReason || 'skipped'} | SMTP: ${smtpErr.message}`,
-      };
-    }
-  }
-
-  console.error('[Email Dispatch Failed] Neither Brevo nor SMTP credentials configured.');
   return {
     success: false,
     provider: 'none',
-    error: 'No email service configured',
+    error: `SMTP: ${smtpErrorReason || 'not configured'} | Brevo failed`,
   };
+}
+
+/**
+ * Send Booking / Pickup Scheduled Confirmation Email to Customer
+ */
+export async function sendBookingConfirmationEmail(props: BookingEmailProps, toEmail: string) {
+  const html = renderBookingConfirmationHtml(props);
+  const subject = `Booking Confirmed — Order ${props.orderNumber} Pickup Scheduled`;
+  return sendEmail({
+    to: toEmail,
+    toName: props.customerName,
+    subject,
+    html,
+  });
 }
 
 /**
@@ -203,3 +237,4 @@ export async function sendTeamInviteEmail(props: InviteEmailProps, toEmail: stri
     html,
   });
 }
+

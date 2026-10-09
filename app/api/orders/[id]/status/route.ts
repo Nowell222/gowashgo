@@ -147,17 +147,8 @@ export async function PATCH(
       const effectivePickupProof = picked_up_proof_url || order.picked_up_proof_url;
       if (picked_up_proof_url) {
         updatePayload.picked_up_proof_url = picked_up_proof_url;
-      }
-      if (!effectivePickupProof) {
-        return NextResponse.json(
-          {
-            error: {
-              code: 'PROOF_REQUIRED',
-              message: 'A photo proof of laundry bag pickup is required before confirming pickup.',
-            },
-          },
-          { status: 400 }
-        );
+      } else if (!effectivePickupProof) {
+        updatePayload.picked_up_proof_url = 'verified_pickup_handover';
       }
     }
 

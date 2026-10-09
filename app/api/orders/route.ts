@@ -290,6 +290,51 @@ export async function POST(request: Request) {
       note: 'Order submitted by customer',
     });
 
+    // 9. Dispatch Order Booking / Pickup Scheduled Email to Customer
+    try {
+      const { sendBookingConfirmationEmail, getAppBaseUrl } = await import('@/lib/email/sender');
+
+      let customerEmail = user.email;
+      let customerName = (user.user_metadata as any)?.full_name || 'Valued Customer';
+
+      const { data: customerProfile } = await serviceClient
+        .from('users')
+        .select('email, full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (customerProfile?.email) {
+        customerEmail = customerProfile.email;
+      }
+      if (customerProfile?.full_name) {
+        customerName = customerProfile.full_name;
+      }
+
+      if (customerEmail) {
+        const appUrl = getAppBaseUrl(request);
+        const trackingUrl = `${appUrl}/customer/orders/${newOrder.id}`;
+
+        await sendBookingConfirmationEmail(
+          {
+            customerName,
+            orderNumber: newOrder.order_number,
+            branchName: branch.name,
+            pickupAddress: newOrder.pickup_address,
+            pickupScheduledAt: newOrder.pickup_scheduled_at,
+            deliveryEstimatedAt: newOrder.delivery_estimated_at,
+            paymentMethod: newOrder.payment_method,
+            totalCentavos: newOrder.total,
+            trackingUrl,
+            itemCount: preparedItems.length,
+          },
+          customerEmail
+        );
+        console.log(`[Order Created] Booking confirmation email dispatched to ${customerEmail} for order ${newOrder.order_number}`);
+      }
+    } catch (emailErr) {
+      console.error('[Order Created] Failed to dispatch booking confirmation email:', emailErr);
+    }
+
     return NextResponse.json(
       {
         data: {

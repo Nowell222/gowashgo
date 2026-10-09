@@ -397,3 +397,162 @@ export function renderInviteEmailHtml(props: InviteEmailProps): string {
 </html>
   `;
 }
+
+export interface BookingEmailProps extends BaseEmailProps {
+  customerName: string;
+  orderNumber: string;
+  branchName: string;
+  pickupAddress: string;
+  pickupScheduledAt?: string | null;
+  deliveryEstimatedAt?: string | null;
+  paymentMethod: string;
+  totalCentavos: number;
+  trackingUrl: string;
+  itemCount?: number;
+}
+
+/**
+ * 4. Order Booking / Pickup Scheduled Confirmation Template
+ */
+export function renderBookingConfirmationHtml(props: BookingEmailProps): string {
+  const {
+    customerName,
+    orderNumber,
+    branchName,
+    pickupAddress,
+    pickupScheduledAt,
+    deliveryEstimatedAt,
+    paymentMethod,
+    totalCentavos,
+    trackingUrl,
+    itemCount,
+  } = props;
+
+  const formattedDelivery = deliveryEstimatedAt
+    ? new Date(deliveryEstimatedAt).toLocaleDateString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Within 24 hours';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed — ${orderNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FAF8F5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0F172A;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #FAF8F5; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 560px; background-color: #FFFFFF; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 16px rgba(14, 116, 144, 0.06);">
+          
+          <!-- Header Bar -->
+          <tr>
+            <td style="background-color: #164E63; padding: 24px 32px; text-align: left;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="font-size: 18px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.02em;">gowashgo</span>
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; background-color: rgba(103, 232, 249, 0.15); color: #67E8F9; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 2px; text-transform: uppercase; letter-spacing: 0.05em;">
+                      Pickup Scheduled ✓
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding: 32px 32px 24px;">
+              <h1 style="margin: 0 0 12px; font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em;">
+                Your laundry pickup is scheduled!
+              </h1>
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #475569;">
+                Hi <strong>${customerName}</strong>, thank you for booking with GoWashGo! Your order <strong>${orderNumber}</strong> has been received by our <strong>${branchName}</strong> hub. Our dispatch team is preparing a rider to collect your laundry.
+              </p>
+
+              <!-- Order Summary Card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #ECFEFF; border-radius: 4px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px 24px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding-bottom: 12px; border-bottom: 1px solid #CFFAFE;">
+                          <span style="font-size: 11px; font-weight: 700; color: #0E7490; text-transform: uppercase; letter-spacing: 0.05em;">Order Number</span>
+                          <div style="font-size: 17px; font-weight: 800; color: #164E63; font-family: monospace; margin-top: 2px;">${orderNumber}</div>
+                        </td>
+                        <td align="right" style="padding-bottom: 12px; border-bottom: 1px solid #CFFAFE;">
+                          <span style="font-size: 11px; font-weight: 700; color: #0E7490; text-transform: uppercase; letter-spacing: 0.05em;">Est. Delivery</span>
+                          <div style="font-size: 14px; font-weight: 700; color: #164E63; margin-top: 2px;">
+                            ${formattedDelivery}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-top: 12px;">
+                          <span style="font-size: 11px; font-weight: 700; color: #0E7490; text-transform: uppercase; letter-spacing: 0.05em;">Pickup Address</span>
+                          <div style="font-size: 13px; color: #334155; margin-top: 2px;">${pickupAddress}</div>
+                        </td>
+                        <td align="right" style="padding-top: 12px;">
+                          <span style="font-size: 11px; font-weight: 700; color: #0E7490; text-transform: uppercase; letter-spacing: 0.05em;">Payment</span>
+                          <div style="font-size: 14px; font-weight: 700; color: #0E7490; text-transform: uppercase; margin-top: 2px;">
+                            ${paymentMethod === 'online' ? 'Online Pay' : 'Cash on Delivery'}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What to Expect Next -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 28px;">
+                <tr>
+                  <td style="font-size: 13px; color: #475569; line-height: 1.6;">
+                    <div style="font-weight: 700; color: #0F172A; margin-bottom: 6px;">What happens next:</div>
+                    1. <strong>Doorstep Weighing:</strong> Our rider will bring a certified digital scale to weigh your laundry bag at your doorstep.<br>
+                    2. <strong>Facility Processing:</strong> Your clothes are washed, tumble dried, and inspected according to fabric care tags.<br>
+                    3. <strong>Fresh Delivery:</strong> We fold and package your fresh laundry and deliver it back to your door.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="${trackingUrl}" target="_blank" style="display: inline-block; background-color: #0E7490; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none; padding: 13px 28px; border-radius: 3px; letter-spacing: 0.02em;">
+                      View &amp; Track Order Status &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F8FAFC; padding: 20px 32px; border-top: 1px solid #E2E8F0; text-align: center; font-size: 12px; color: #64748B;">
+              <div>GoWashGo — General Luna St., Poblacion, San Juan, Batangas</div>
+              <div style="margin-top: 4px;">Smart laundry pickup and doorstep delivery platform.</div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+

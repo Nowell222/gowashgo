@@ -5,11 +5,11 @@ import type { OrderStatus, UserRole } from '@/lib/types';
  * Each key maps to the set of statuses it can transition TO.
  */
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['rider_assigned', 'cancelled'],
-  rider_assigned: ['pickup_en_route', 'cancelled'],
+  pending: ['confirmed', 'rider_assigned', 'picked_up', 'cancelled'],
+  confirmed: ['rider_assigned', 'pickup_en_route', 'picked_up', 'cancelled'],
+  rider_assigned: ['pickup_en_route', 'picked_up', 'cancelled'],
   pickup_en_route: ['picked_up', 'cancelled'],
-  picked_up: ['at_facility', 'cancelled'],
+  picked_up: ['at_facility', 'washing', 'cancelled'],
   at_facility: ['washing', 'ready_for_delivery', 'cancelled'],
   washing: ['drying', 'ready_for_delivery', 'cancelled'],
   drying: ['folding', 'ready_for_delivery', 'cancelled'],
@@ -26,15 +26,21 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
  * Multiple roles may trigger the same transition.
  */
 const TRANSITION_PERMISSIONS: Record<string, UserRole[]> = {
-  'pending->confirmed': ['staff', 'branch_manager'],
+  'pending->confirmed': ['staff', 'branch_manager', 'rider'],
+  'pending->rider_assigned': ['staff', 'branch_manager'],
+  'pending->picked_up': ['staff', 'branch_manager', 'rider'],
   'pending->cancelled': ['customer', 'staff', 'branch_manager'],
   'confirmed->rider_assigned': ['staff', 'branch_manager'],
+  'confirmed->pickup_en_route': ['rider', 'staff', 'branch_manager'],
+  'confirmed->picked_up': ['rider', 'staff', 'branch_manager'],
   'confirmed->cancelled': ['customer', 'staff', 'branch_manager'],
-  'rider_assigned->pickup_en_route': ['rider'],
+  'rider_assigned->pickup_en_route': ['rider', 'staff', 'branch_manager'],
+  'rider_assigned->picked_up': ['rider', 'staff', 'branch_manager'],
   'rider_assigned->cancelled': ['staff', 'branch_manager'],
-  'pickup_en_route->picked_up': ['rider'],
+  'pickup_en_route->picked_up': ['rider', 'staff', 'branch_manager'],
   'pickup_en_route->cancelled': ['staff', 'branch_manager'],
   'picked_up->at_facility': ['rider', 'staff', 'branch_manager'],
+  'picked_up->washing': ['staff', 'branch_manager'],
   'picked_up->cancelled': ['staff', 'branch_manager'],
   'at_facility->washing': ['staff', 'branch_manager'],
   'at_facility->ready_for_delivery': ['staff', 'branch_manager'],
@@ -47,9 +53,9 @@ const TRANSITION_PERMISSIONS: Record<string, UserRole[]> = {
   'drying->cancelled': ['staff', 'branch_manager'],
   'folding->ready_for_delivery': ['staff', 'branch_manager'],
   'folding->cancelled': ['staff', 'branch_manager'],
-  'ready_for_delivery->delivery_en_route': ['rider'],
+  'ready_for_delivery->delivery_en_route': ['rider', 'staff', 'branch_manager'],
   'ready_for_delivery->cancelled': ['staff', 'branch_manager'],
-  'delivery_en_route->delivered': ['rider'],
+  'delivery_en_route->delivered': ['rider', 'staff', 'branch_manager'],
   'delivered->completed': ['staff', 'branch_manager', 'platform_admin'],
 };
 
