@@ -114,6 +114,14 @@ export async function downloadAdminPlatformReport(data: any) {
   const branches = data?.branches || [];
   const orders = data?.recentOrders || [];
 
+  const totalBranchRevenue = branches.reduce((sum: number, b: any) => sum + (b.revenueCentavos || 0), 0);
+  const totalBranchVolume = branches.reduce((sum: number, b: any) => sum + (b.totalVolumeCentavos || b.revenueCentavos || 0), 0);
+  const totalBranchOrders = branches.reduce((sum: number, b: any) => sum + (b.ordersCount || 0), 0);
+
+  const completedLedgerOrders = orders.filter((o: any) => ['delivered', 'completed'].includes(o.status));
+  const completedLedgerCentavos = completedLedgerOrders.reduce((sum: number, o: any) => sum + (o.totalCentavos || 0), 0);
+  const totalLedgerCentavos = orders.reduce((sum: number, o: any) => sum + (o.totalCentavos || 0), 0);
+
   drawReportHeader(
     doc,
     'Platform Operations & Financial Ledger Report',
@@ -121,49 +129,46 @@ export async function downloadAdminPlatformReport(data: any) {
     'PLATFORM ADMIN LEDGER'
   );
 
-  // Executive KPI summary box
+  // Executive KPI summary box showing both Completed Revenue and Total Platform Pipeline GMV
   doc.setFillColor(...COLOR_BG_LIGHT);
   doc.roundedRect(14, 52, doc.internal.pageSize.width - 28, 22, 2, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('TOTAL AMOUNT PROCESSED (GMV)', 20, 58);
-  doc.text('TOTAL ORDERS', 80, 58);
-  doc.text('CLEAN WEIGHT PROCESSED', 135, 58);
-  doc.text('ACTIVE BRANCH HUBS', 195, 58);
-  doc.text('REGISTERED USERS', 245, 58);
+  doc.text('COMPLETED REVENUE (REALIZED)', 20, 58);
+  doc.text('TOTAL PLATFORM VALUE (GMV)', 78, 58);
+  doc.text('TOTAL ORDERS', 145, 58);
+  doc.text('CLEAN WEIGHT', 195, 58);
+  doc.text('ACTIVE BRANCH HUBS', 245, 58);
 
   doc.setFontSize(13);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPdfNumber(s.totalRevenueCentavos || 0), 20, 67);
-  doc.text(String(s.totalOrders || 0), 80, 67);
-  doc.text(`${s.totalWeightKg || 0} kg`, 135, 67);
-  doc.text(`${s.totalBranches || 0} locations`, 195, 67);
-  doc.text(`${s.totalUsers || 0} users`, 245, 67);
+  doc.text(formatPdfNumber(s.totalRevenueCentavos || totalBranchRevenue), 20, 67);
+  doc.text(formatPdfNumber(s.totalVolumeCentavos || totalLedgerCentavos || totalBranchVolume), 78, 67);
+  doc.text(String(s.totalOrders || orders.length), 145, 67);
+  doc.text(`${s.totalWeightKg || 0} kg`, 195, 67);
+  doc.text(`${s.totalBranches || branches.length} locations`, 245, 67);
 
-  // Section 1: Branch Hubs Comparison Table
+  // Section 1: Branch Hubs Comparison Table showing both Completed Revenue and Total Volume
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLOR_TEXT);
   doc.text('Branch Hubs Performance Summary', 14, 82);
 
-  const totalBranchRevenue = branches.reduce((sum: number, b: any) => sum + (b.revenueCentavos || 0), 0);
-  const totalBranchOrders = branches.reduce((sum: number, b: any) => sum + (b.ordersCount || 0), 0);
-
   autoTable(doc, {
     startY: 86,
-    head: [['Hub Name', 'Physical Address', 'Orders Volume', 'Active Load', 'Assigned Team', 'Total Amount Processed', 'Status']],
+    head: [['Hub Name', 'Physical Address', 'Orders Volume', 'Active Load', 'Completed Revenue', 'Total Orders Value', 'Status']],
     body: branches.map((b: any) => [
       b.name,
       b.address,
       `${b.ordersCount || 0} orders`,
       `${b.activeOrdersCount || 0} active`,
-      `${b.staffCount || 0} staff & riders`,
       formatPdfNumber(b.revenueCentavos || 0),
+      formatPdfNumber(b.totalVolumeCentavos || b.revenueCentavos || 0),
       b.isActive ? 'Active' : 'Inactive',
     ]),
-    foot: [['TOTAL PLATFORM PROCESSED', '', `${totalBranchOrders} orders`, '', '', formatPdfNumber(totalBranchRevenue), '']],
+    foot: [['TOTAL ALL HUBS', '', `${totalBranchOrders} orders`, '', formatPdfNumber(totalBranchRevenue), formatPdfNumber(totalBranchVolume), '']],
     theme: 'grid',
     headStyles: {
       fillColor: COLOR_DARK,
@@ -184,14 +189,12 @@ export async function downloadAdminPlatformReport(data: any) {
     margin: { left: 14, right: 14 },
   });
 
-  // Section 2: Detailed Orders Ledger
+  // Section 2: Detailed Orders Ledger with complete platform orders
   const nextY = (doc as any).lastAutoTable.finalY + 12;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...COLOR_TEXT);
   doc.text('Platform Orders Ledger', 14, nextY);
-
-  const totalLedgerCentavos = orders.reduce((sum: number, o: any) => sum + (o.totalCentavos || 0), 0);
 
   autoTable(doc, {
     startY: nextY + 4,
@@ -207,7 +210,10 @@ export async function downloadAdminPlatformReport(data: any) {
       formatPdfNumber(o.totalCentavos || 0),
       new Date(o.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
     ]),
-    foot: [['TOTAL PROCESSED', `${orders.length} orders`, '', '', '', '', '', formatPdfNumber(totalLedgerCentavos), '']],
+    foot: [
+      ['TOTAL PLATFORM ORDERS VALUE', `${orders.length} orders`, '', '', '', '', '', formatPdfNumber(totalLedgerCentavos), ''],
+      ['— of which COMPLETED / DELIVERED', `${completedLedgerOrders.length} orders`, '', '', '', '', '', formatPdfNumber(completedLedgerCentavos), ''],
+    ],
     theme: 'striped',
     headStyles: {
       fillColor: COLOR_PRIMARY,
@@ -266,33 +272,43 @@ export async function downloadManagerShiftReport(props: {
   );
 
   const completedOrders = orders.filter((o) => ['delivered', 'completed'].includes(o.status));
+  const activeOrders = orders.filter((o) => !['delivered', 'completed', 'cancelled'].includes(o.status));
   const totalRealizedRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalAmountAllOrders = orders.reduce((sum, o) => sum + (o.total || 0), 0);
   const totalWeight = completedOrders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
+  const allOrdersWeight = orders.reduce((sum, o) => sum + (o.weight_kg || 0), 0);
   const unremittedCash = riderSettlements
     .filter((r) => !r.isSettled)
     .reduce((sum, r) => sum + (r.cashCollected || 0), 0);
 
-  // Shift KPIs Box
+  // Shift KPIs Box showing both Completed Revenue and Total Shift Value
   doc.setFillColor(...COLOR_BG_LIGHT);
-  doc.roundedRect(14, 52, doc.internal.pageSize.width - 28, 22, 2, 2, 'F');
+  doc.roundedRect(14, 52, doc.internal.pageSize.width - 28, 24, 2, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(...COLOR_MUTED);
-  doc.text('TOTAL AMOUNT PROCESSED', 20, 58);
-  doc.text('COMPLETED ORDERS', 72, 58);
-  doc.text('TOTAL WEIGHT', 115, 58);
-  doc.text('UNREMITTED COD CASH', 150, 58);
+  doc.text('COMPLETED REVENUE', 20, 58);
+  doc.text('TOTAL SHIFT VALUE', 68, 58);
+  doc.text('ORDERS VOLUME', 115, 58);
+  doc.text('UNREMITTED COD CASH', 152, 58);
 
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(...COLOR_DARK);
-  doc.text(formatPdfNumber(totalRealizedRevenue), 20, 67);
-  doc.text(String(completedOrders.length), 72, 67);
-  doc.text(`${totalWeight.toFixed(1)} kg`, 115, 67);
+  doc.text(formatPdfNumber(totalRealizedRevenue), 20, 66);
+  doc.text(formatPdfNumber(totalAmountAllOrders), 68, 66);
+  doc.text(`${completedOrders.length} done / ${orders.length} total`, 115, 66);
 
   doc.setTextColor(180, 83, 9); // Amber for unremitted cash
-  doc.text(formatPdfNumber(unremittedCash), 150, 67);
+  doc.text(formatPdfNumber(unremittedCash), 152, 66);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...COLOR_MUTED);
+  doc.text('Delivered & Fulfilled', 20, 72);
+  doc.text(`All ${orders.length} Orders in Shift`, 68, 72);
+  doc.text(`${totalWeight.toFixed(1)} kg completed weight`, 115, 72);
+  doc.text('Courier drawer handover', 152, 72);
 
   // Section 1: Courier COD Cash Reconciliation Table
   doc.setFontSize(11);
@@ -333,7 +349,7 @@ export async function downloadManagerShiftReport(props: {
     margin: { left: 14, right: 14 },
   });
 
-  // Section 2: Shift Orders Manifest
+  // Section 2: Shift Orders Manifest with breakdown footer
   const nextY = (doc as any).lastAutoTable.finalY + 12;
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -343,7 +359,7 @@ export async function downloadManagerShiftReport(props: {
   autoTable(doc, {
     startY: nextY + 4,
     head: [['Order #', 'Customer', 'Courier', 'Status', 'Weight (kg)', 'Payment', 'Amount Processed']],
-    body: orders.slice(0, 35).map((o: any) => [
+    body: orders.map((o: any) => [
       o.order_number,
       o.customer?.full_name || 'Customer',
       o.rider?.full_name || '—',
@@ -352,7 +368,10 @@ export async function downloadManagerShiftReport(props: {
       (o.payment_method || 'online').toUpperCase(),
       formatPdfNumber(o.total || 0),
     ]),
-    foot: [['TOTAL SHIFT PROCESSED', `${orders.length} orders`, '', '', `${totalWeight.toFixed(1)} kg`, '', formatPdfNumber(totalAmountAllOrders)]],
+    foot: [
+      [`TOTAL SHIFT VALUE (ALL ${orders.length} ORDERS)`, `${orders.length} orders`, '', '', `${allOrdersWeight.toFixed(1)} kg`, '', formatPdfNumber(totalAmountAllOrders)],
+      [`— of which COMPLETED / DELIVERED`, `${completedOrders.length} orders`, '', '', `${totalWeight.toFixed(1)} kg`, '', formatPdfNumber(totalRealizedRevenue)],
+    ],
     theme: 'striped',
     headStyles: {
       fillColor: COLOR_PRIMARY,

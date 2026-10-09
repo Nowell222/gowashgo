@@ -105,8 +105,10 @@ export async function GET() {
     const branchesWithStats = branches.map((b) => {
       const branchOrders = orders.filter((o) => o.branch_id === b.id);
       const branchStaff = users.filter((u) => u.branch_id === b.id && ['staff', 'rider', 'branch_manager'].includes(u.role));
-      const branchRevenue = branchOrders
+      const branchCompletedRevenue = branchOrders
         .filter((o) => ['delivered', 'completed'].includes(o.status))
+        .reduce((sum, o) => sum + (o.total || 0), 0);
+      const branchTotalVolume = branchOrders
         .reduce((sum, o) => sum + (o.total || 0), 0);
       const branchActive = branchOrders.filter((o) => !['delivered', 'completed', 'cancelled'].includes(o.status));
 
@@ -122,11 +124,17 @@ export async function GET() {
         ordersCount: branchOrders.length,
         activeOrdersCount: branchActive.length,
         staffCount: branchStaff.length,
-        revenueCentavos: branchRevenue,
+        revenueCentavos: branchCompletedRevenue,
+        totalVolumeCentavos: branchTotalVolume,
       };
     });
 
-    const recentOrders = orders.slice(0, 10).map((o) => ({
+    const totalVolumeCentavos = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const activePipelineCentavos = orders
+      .filter((o) => !['delivered', 'completed', 'cancelled'].includes(o.status))
+      .reduce((sum, o) => sum + (o.total || 0), 0);
+
+    const allPlatformOrders = orders.map((o) => ({
       id: o.id,
       orderNumber: o.order_number,
       customerName: (o.customer as any)?.full_name || 'Customer',
@@ -155,6 +163,8 @@ export async function GET() {
           activeBranches: branches.filter((b) => b.is_active).length,
           totalOrders: orders.length,
           totalRevenueCentavos,
+          totalVolumeCentavos,
+          activePipelineCentavos,
           todayOrders: todayOrders.length,
           todayRevenueCentavos,
           totalWeightKg: Math.round(totalWeightKg * 10) / 10,
@@ -169,7 +179,7 @@ export async function GET() {
           adminCount,
         },
         branches: branchesWithStats,
-        recentOrders,
+        recentOrders: allPlatformOrders,
         recentEvents,
       },
     });
