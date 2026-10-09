@@ -185,6 +185,41 @@
   transition: all var(--transition-fast);
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #FFFFFF;
+  padding: 16px 20px;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.stat-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748B;
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+}
+
+.stat-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #164E63;
+  letter-spacing: -0.03em;
+  font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+  line-height: 1.1;
+}
+
 .card--interactive:hover {
   background: #F8FAFC;
 }
